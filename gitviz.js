@@ -470,8 +470,8 @@ function getRepoAgeDays(repoPath = ".") {
   ).padStart(2, "0")}`;
   console.log(color(`Analyzed on: ${stamp}`, COLORS.dim));
   let meta = `Scope: ${args.all ? "all branches" : "current branch"}`;
-  meta += `Repo Age: ${repoAge} days`;
-  meta += `Time Window: last ${args.days} days (${isDaysInputOutReached ? "trimmed" : ""})`;
+  meta += `\nRepo Age: ${repoAge} days`;
+  meta += `\nTime Window: last ${args.days} days (${isDaysInputOutReached ? "trimmed" : ""})`;
   if (args.author) meta += `, Author filter: '${args.author}'`;
   console.log(color(meta, COLORS.dim));
 

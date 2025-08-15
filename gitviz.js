@@ -162,18 +162,110 @@ function parseGitLog(days, includeAll, author, cwd = ".") {
   return commits;
 }
 
+// Parse "YYYY-MM-DD" to a UTC timestamp (ms)
+function parseYmdUTC(s) {
+  const [y, m, d] = s.split("-").map(Number);
+  return Date.UTC(y, m - 1, d); // month zero-based
+}
+
+// Difference in whole days (endDate - startDate). 2025-08-10 -> 2025-08-13 (11,12,13) => 3
+// includeStart (default true); to also include the start date, so 2025-08-10 -> 2025-08-13 (10,11,12,13) => 4 (instead of 3 with false)
+function diffDaysUTC(startDate, endDate, includeStart = true) {
+  const msPerDay = 86400000;
+  return (((parseYmdUTC(endDate) - parseYmdUTC(startDate)) / msPerDay) + (includeStart ? 1 : 0));
+}
+
+function combineSameFrequencyDateRange(list) {
+  const result = [];
+  let current = null; // { start, end, commitNo }
+
+  const commitHeader = () => {
+    return [
+    "┌─────────────────────────┬───────────┬────────┐",
+    "│ Time Range              │ Commit(s) │ Day(s) │",
+    "├─────────────────────────┼───────────┼────────┤",
+    ].join("\n");
+  }
+  const commitFooter = () => {
+    return [
+    "└─────────────────────────┴───────────┴────────┘",
+    ].join("\n");
+  }
+  console.log(commitHeader());
+
+  const lineFormat = (startDate, endDate, commitNo, range=false) => {
+    if (!range) {
+      return `│ ${startDate} - ${endDate} │ ${padLeft(commitNo, 9)} │ ${padLeft(1, 6)} │`;
+    }else{
+      const days = diffDaysUTC(startDate, endDate);
+      // days > 1 ? `${days} days` : `${days} day`
+      return `│ ${startDate} - ${endDate} │ ${padLeft(commitNo, 9)} │ ${padLeft(days, 6)} │`;
+    }
+  }
+
+  for (let i = 0; i < list.length; i++) {
+    const line = list[i];
+    if (!line || !line.trim()) continue;
+
+    // Robust split & parse
+    const parts = line.split("|");
+    if (parts.length < 2) continue;
+    const date = parts[0].trim();
+    const commitNo = parseInt(parts[1].trim(), 10);
+
+    if (!current) {
+      current = { start: date, end: date, commitNo };
+      continue;
+    }
+
+    if (commitNo === current.commitNo) {
+      // same streak: extend only end
+      current.end = date;
+    } else {
+      // push finished current
+      
+      // No range, one/same date
+      if (current.start === current.end) {
+        result.push(lineFormat(current.start, current.end, current.commitNo, false));
+      } else {
+        result.push(lineFormat(current.start, current.end, current.commitNo, true));
+      }
+      // start new streak
+      current = { start: date, end: date, commitNo };
+    }
+  }
+
+  // Flush last
+  if (current) {
+    if (current.start === current.end) {
+      result.push(lineFormat(current.start, current.end, current.commitNo, false));
+    } else {
+      result.push(lineFormat(current.start, current.end, current.commitNo, true));
+    }
+  }
+  result.push(commitFooter())
+  return result;
+}
+
 function makeHistogram(byDay, days, width) {
   const labels = daterangeList(days);
   const values = labels.map((d) => byDay[d] || 0);
   const max = values.length ? Math.max(...values) : 0;
+
+  // Build raw day lines first
   const lines = [];
   for (let i = 0; i < labels.length; i++) {
-    const v = values[i];
-    const barLen = max > 0 ? Math.round((v / max) * width) : 0;
-    const bar = "█".repeat(barLen);
-    lines.push(`${labels[i]} | ${bar} ${v}`);
+    const date = labels[i];
+    const commitNo = values[i];
+    lines.push(`${date} | ${padLeft(commitNo, 3)}`);
   }
-  return { lines, max };
+
+  let merged = []
+  if (max !== 0) {
+  // Collapse consecutive same-frequency days
+    merged = combineSameFrequencyDateRange(lines);
+  }
+  return { lines: merged, max };
 }
 
 function countBy(arr, keyFn) {
@@ -217,7 +309,7 @@ function branchesSummary(limit, cwd = ".") {
 // ========= Printers =========
 function header(title) {
   console.log("\n" + color(title, COLORS.bold));
-  console.log(color("―".repeat(title.length), COLORS.blue));
+  console.log(color("─".repeat(title.length), COLORS.blue));
 }
 
 function printCommitFrequency(commits, days, width) {

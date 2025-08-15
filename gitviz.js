@@ -14,6 +14,7 @@
 
 const { execFileSync } = require("child_process");
 const fs = require("fs");
+const { exit } = require("process");
 
 // ========= Small utilities =========
 const COLORS = {
@@ -53,18 +54,42 @@ function parseArgs(argv) {
     const tok = argv[i];
     const next = () => argv[++i];
     switch (tok) {
-      case "--repo": out.repo = next(); break;
-      case "--days": out.days = parseInt(next(), 10) || 30; break;
-      case "--all": out.all = true; break;
-      case "--author": out.author = next(); break;
-      case "--width": out.width = parseInt(next(), 10) || 40; break;
-      case "--top": out.top = parseInt(next(), 10) || 10; break;
-      case "--limit-branches": out.limitBranches = parseInt(next(), 10) || 15; break;
-      case "--no-branches": out.noBranches = true; break;
-      case "--no-contrib": out.noContrib = true; break;
-      case "--no-graph": out.noGraph = true; break;
-      case "-h": case "--help": out.help = true; break;
-      default: /* ignore unknown */ break;
+      case "--repo":
+        out.repo = next();
+        break;
+      case "--days":
+        out.days = parseInt(next(), 10) || 30;
+        break;
+      case "--all":
+        out.all = true;
+        break;
+      case "--author":
+        out.author = next();
+        break;
+      case "--width":
+        out.width = parseInt(next(), 10) || 40;
+        break;
+      case "--top":
+        out.top = parseInt(next(), 10) || 10;
+        break;
+      case "--limit-branches":
+        out.limitBranches = parseInt(next(), 10) || 15;
+        break;
+      case "--no-branches":
+        out.noBranches = true;
+        break;
+      case "--no-contrib":
+        out.noContrib = true;
+        break;
+      case "--no-graph":
+        out.noGraph = true;
+        break;
+      case "-h":
+      case "--help":
+        out.help = true;
+        break;
+      default:
+        /* ignore unknown */ break;
     }
   }
   return out;
@@ -102,7 +127,9 @@ function runGit(args, cwd = ".") {
     return execFileSync("git", args, { cwd, encoding: "utf8" });
   } catch (err) {
     if (err.code === "ENOENT") {
-      console.error("Error: 'git' command not found. Install Git and ensure it's on PATH.");
+      console.error(
+        "Error: 'git' command not found. Install Git and ensure it's on PATH."
+      );
     } else if (err.stdout || err.stderr) {
       console.error("Git command failed:\n" + (err.stdout || err.stderr));
     } else {
@@ -116,7 +143,9 @@ function ensureGitRepo(cwd = ".") {
   try {
     runGit(["rev-parse", "--is-inside-work-tree"], cwd);
   } catch (_) {
-    console.error("Error: Not a git repository (or any of the parent directories). Use --repo.");
+    console.error(
+      "Error: Not a git repository (or any of the parent directories). Use --repo."
+    );
     process.exit(1);
   }
 }
@@ -143,7 +172,7 @@ function daterangeList(days) {
 function parseGitLog(days, includeAll, author, cwd = ".") {
   const fmt = "%h|%an|%ad|%s";
   const args = ["log", "--date=short", `--pretty=format:${fmt}`];
-  if (includeAll) args.unshift("--all"); // insert after git
+  if (includeAll) args.splice(1, 0, "--all"); // correct placement AFTER 'log'
   if (author) args.push(`--author=${author}`);
   if (days && days > 0) {
     const since = new Date();
@@ -172,7 +201,10 @@ function parseYmdUTC(s) {
 // includeStart (default true); to also include the start date, so 2025-08-10 -> 2025-08-13 (10,11,12,13) => 4 (instead of 3 with false)
 function diffDaysUTC(startDate, endDate, includeStart = true) {
   const msPerDay = 86400000;
-  return (((parseYmdUTC(endDate) - parseYmdUTC(startDate)) / msPerDay) + (includeStart ? 1 : 0));
+  return (
+    (parseYmdUTC(endDate) - parseYmdUTC(startDate)) / msPerDay +
+    (includeStart ? 1 : 0)
+  );
 }
 
 function combineSameFrequencyDateRange(list) {
@@ -181,27 +213,31 @@ function combineSameFrequencyDateRange(list) {
 
   const commitHeader = () => {
     return [
-    "┌─────────────────────────┬───────────┬────────┐",
-    "│ Time Range              │ Commit(s) │ Day(s) │",
-    "├─────────────────────────┼───────────┼────────┤",
+      "┌─────────────────────────┬───────────┬────────┐",
+      "│ Time Range              │ Commit(s) │ Day(s) │",
+      "├─────────────────────────┼───────────┼────────┤",
     ].join("\n");
-  }
+  };
   const commitFooter = () => {
-    return [
-    "└─────────────────────────┴───────────┴────────┘",
-    ].join("\n");
-  }
+    return ["└─────────────────────────┴───────────┴────────┘"].join("\n");
+  };
   console.log(commitHeader());
 
-  const lineFormat = (startDate, endDate, commitNo, range=false) => {
+  const lineFormat = (startDate, endDate, commitNo, range = false) => {
     if (!range) {
-      return `│ ${startDate} - ${endDate} │ ${padLeft(commitNo, 9)} │ ${padLeft(1, 6)} │`;
-    }else{
+      return `│ ${startDate} - ${endDate} │ ${padLeft(commitNo, 9)} │ ${padLeft(
+        1,
+        6
+      )} │`;
+    } else {
       const days = diffDaysUTC(startDate, endDate);
       // days > 1 ? `${days} days` : `${days} day`
-      return `│ ${startDate} - ${endDate} │ ${padLeft(commitNo, 9)} │ ${padLeft(days, 6)} │`;
+      return `│ ${startDate} - ${endDate} │ ${padLeft(commitNo, 9)} │ ${padLeft(
+        days,
+        6
+      )} │`;
     }
-  }
+  };
 
   for (let i = 0; i < list.length; i++) {
     const line = list[i];
@@ -211,7 +247,7 @@ function combineSameFrequencyDateRange(list) {
     const parts = line.split("|");
     if (parts.length < 2) continue;
     const date = parts[0].trim();
-    const commitNo = parseInt(parts[1].trim(), 10);
+    const commitNo = parseInt(parts[1], 10);
 
     if (!current) {
       current = { start: date, end: date, commitNo };
@@ -223,12 +259,16 @@ function combineSameFrequencyDateRange(list) {
       current.end = date;
     } else {
       // push finished current
-      
+
       // No range, one/same date
       if (current.start === current.end) {
-        result.push(lineFormat(current.start, current.end, current.commitNo, false));
+        result.push(
+          lineFormat(current.start, current.end, current.commitNo, false)
+        );
       } else {
-        result.push(lineFormat(current.start, current.end, current.commitNo, true));
+        result.push(
+          lineFormat(current.start, current.end, current.commitNo, true)
+        );
       }
       // start new streak
       current = { start: date, end: date, commitNo };
@@ -238,12 +278,16 @@ function combineSameFrequencyDateRange(list) {
   // Flush last
   if (current) {
     if (current.start === current.end) {
-      result.push(lineFormat(current.start, current.end, current.commitNo, false));
+      result.push(
+        lineFormat(current.start, current.end, current.commitNo, false)
+      );
     } else {
-      result.push(lineFormat(current.start, current.end, current.commitNo, true));
+      result.push(
+        lineFormat(current.start, current.end, current.commitNo, true)
+      );
     }
   }
-  result.push(commitFooter())
+  result.push(commitFooter());
   return result;
 }
 
@@ -260,9 +304,9 @@ function makeHistogram(byDay, days, width) {
     lines.push(`${date} | ${padLeft(commitNo, 3)}`);
   }
 
-  let merged = []
+  let merged = [];
   if (max !== 0) {
-  // Collapse consecutive same-frequency days
+    // Collapse consecutive same-frequency days
     merged = combineSameFrequencyDateRange(lines);
   }
   return { lines: merged, max };
@@ -286,8 +330,12 @@ function contributorsSummary(commits) {
 
 function branchesSummary(limit, cwd = ".") {
   // Mark current branch with '*'
-  const fmt = "%(if)%(HEAD)%(then)*%(else) %(end)%(refname:short)|%(committerdate:short)|%(objectname:short)";
-  const out = runGit(["for-each-ref", "--sort=-committerdate", `--format=${fmt}`, "refs/heads/"], cwd);
+  const fmt =
+    "%(if)%(HEAD)%(then)*%(else) %(end)%(refname:short)|%(committerdate:short)|%(objectname:short)";
+  const out = runGit(
+    ["for-each-ref", "--sort=-committerdate", `--format=${fmt}`, "refs/heads/"],
+    cwd
+  );
   const branches = [];
   out.split(/\r?\n/).forEach((line) => {
     if (!line.trim()) return;
@@ -329,25 +377,66 @@ function printContributors(commits, topN = 10) {
   const { entries, total } = contributorsSummary(commits);
   if (total === 0) return console.log("No commits found.");
   console.log(`Total commits: ${total}`);
-  console.log(`${padLeft('#', 2)}  ${padRight('Author', 30)} ${padLeft('Commits', 7)} ${padLeft('Share', 7)}`);
+  console.log(
+    `${padLeft("#", 2)}  ${padRight("Author", 30)} ${padLeft(
+      "Commits",
+      7
+    )} ${padLeft("Share", 7)}`
+  );
   console.log("-".repeat(52));
   entries.slice(0, topN).forEach(([name, cnt], i) => {
     const share = total ? ((cnt / total) * 100).toFixed(1) : "0.0";
     const trimmed = name.length > 30 ? name.slice(0, 27) + "..." : name;
-    console.log(`${padLeft(i + 1, 2)}  ${padRight(trimmed, 30)} ${padLeft(cnt, 7)} ${padLeft(share + '%', 7)}`);
+    console.log(
+      `${padLeft(i + 1, 2)}  ${padRight(trimmed, 30)} ${padLeft(
+        cnt,
+        7
+      )} ${padLeft(share + "%", 7)}`
+    );
   });
 }
 
 function printBranches(branches) {
   header("Branches (local)");
   if (!branches.length) return console.log("No branches found.");
-  console.log(`${" ".repeat(1)}${padRight('Branch', 30)} ${padLeft('Commits', 7)}  ${padRight('Last Commit', 12)}  ${padRight('Tip', 8)}`);
+  console.log(
+    `${" ".repeat(1)}${padRight("Branch", 30)} ${padLeft(
+      "Commits",
+      7
+    )}  ${padRight("Last Commit", 12)}  ${padRight("Tip", 8)}`
+  );
   console.log("-".repeat(65));
   for (const b of branches) {
     const star = b.current ? "*" : " ";
     const name = b.name.length > 30 ? b.name.slice(0, 27) + "..." : b.name;
-    console.log(`${star}${padRight(name, 30)} ${padLeft(b.count, 7)}  ${padRight(b.lastDate, 12)}  ${padRight(b.tip, 8)}`);
+    console.log(
+      `${star}${padRight(name, 30)} ${padLeft(b.count, 7)}  ${padRight(
+        b.lastDate,
+        12
+      )}  ${padRight(b.tip, 8)}`
+    );
   }
+}
+
+function getRepoAgeDays(repoPath = ".") {
+  // Returns inclusive age in days (first commit day counts as day 1).
+  // If no commits, returns 0.
+  let firstDate;
+  try {
+    // Get earliest commit date (author date in YYYY-MM-DD)
+    const out = runGit(
+      ["log", "--date=short", "--pretty=format:%ad", "--reverse"],
+      repoPath
+    )
+      .trim()
+      .split("\n")[0];
+    firstDate = out || null;
+  } catch {
+    return 0;
+  }
+  if (!firstDate) return 0;
+  const today = fmtDate(new Date());
+  return diffDaysUTC(firstDate, today, true);
 }
 
 // ========= Main =========
@@ -362,6 +451,10 @@ function printBranches(branches) {
   }
   ensureGitRepo(args.repo);
 
+  repoAge = parseInt(getRepoAgeDays(args.repo));
+  isDaysInputOutReached = args.days > repoAge;
+  args.days = parseInt(args.days) < repoAge ? parseInt(args.days) : repoAge;
+
   // Collect commits
   const commits = parseGitLog(args.days, args.all, args.author, args.repo);
 
@@ -369,9 +462,16 @@ function printBranches(branches) {
   console.log(color("Git Log Visualizer (CLI) — Node.js", COLORS.bold));
   console.log(color(`Repo: ${args.repo}`, COLORS.cyan));
   const now = new Date();
-  const stamp = `${fmtDate(now)} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+  const stamp = `${fmtDate(now)} ${String(now.getHours()).padStart(
+    2,
+    "0"
+  )}:${String(now.getMinutes()).padStart(2, "0")}:${String(
+    now.getSeconds()
+  ).padStart(2, "0")}`;
   console.log(color(`Analyzed on: ${stamp}`, COLORS.dim));
-  let meta = `Scope: ${args.all ? '--all' : 'current branch'}, Window: last ${args.days} days`;
+  let meta = `Scope: ${args.all ? "all branches" : "current branch"}`;
+  meta += `Repo Age: ${repoAge} days`;
+  meta += `Time Window: last ${args.days} days (${isDaysInputOutReached ? "trimmed" : ""})`;
   if (args.author) meta += `, Author filter: '${args.author}'`;
   console.log(color(meta, COLORS.dim));
 

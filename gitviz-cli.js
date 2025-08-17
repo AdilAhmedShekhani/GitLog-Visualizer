@@ -57,6 +57,85 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i++) {
     const t = argv[i];
     const next = () => argv[++i];
+    // Generic --key[value] support
+    if (
+      t.startsWith("--") &&
+      t.includes("[") &&
+      t.endsWith("]") &&
+      !t.includes(" ")
+    ) {
+      const m = t.match(/^--([a-z0-9-]+)\[(.*)\]$/i);
+      if (m) {
+        const flag = `--${m[1]}`;
+        const val = m[2] === "" ? null : m[2];
+        switch (flag) {
+          case "--repo":
+            if (val) args.repo = val;
+            break;
+          case "--author":
+            if (val) args.author = val;
+            break;
+          case "--days":
+            args.days = val ? parseInt(val, 10) || null : null;
+            break;
+          case "--top-contributors":
+          case "--top":
+            args.topContributors = val ? parseInt(val, 10) || 10 : 10;
+            args.contributors = true;
+            break;
+          case "--format":
+            if (val) args.format = val.toLowerCase();
+            break;
+          case "--commit-frequency":
+            args.commitFrequency = val || "daily";
+            break;
+          case "--since":
+            if (val) args.since = val;
+            break;
+          case "--until":
+            if (val) args.until = val;
+            break;
+          default:
+            // ignore unknown bracket flag
+            break;
+        }
+        continue; // move to next arg
+      }
+    }
+    // Generic --key=value support for options we recognize
+    if (t.startsWith("--") && t.includes("=")) {
+      const [flag, valRaw] = t.split(/=(.+)/); // keep everything after first =
+      const val = valRaw === undefined || valRaw === "" ? null : valRaw;
+      switch (flag) {
+        case "--repo":
+          if (val) args.repo = val;
+          continue;
+        case "--author":
+          if (val) args.author = val;
+          continue;
+        case "--days":
+          args.days = val ? parseInt(val, 10) || null : null;
+          continue;
+        case "--top-contributors":
+        case "--top":
+          args.topContributors = val ? parseInt(val, 10) || 10 : 10;
+          args.contributors = true;
+          continue;
+        case "--format":
+          if (val) args.format = val.toLowerCase();
+          continue;
+        case "--commit-frequency":
+          args.commitFrequency = val || "daily";
+          continue;
+        // since/until already handled below but accept here too
+        case "--since":
+          if (val) args.since = val;
+          continue;
+        case "--until":
+          if (val) args.until = val;
+          continue;
+      }
+    }
     if (t === "--repo") args.repo = next();
     else if (t === "--all") args.all = true;
     else if (t === "--author") args.author = next();
@@ -69,14 +148,26 @@ function parseArgs(argv) {
     else if (t === "--top-contributors")
       args.topContributors = parseInt(next(), 10) || 10;
     else if (t === "--contributor-stats") args.contributorStats = true;
-    else if (t.startsWith("--commit-frequency")) {
-      if (t.includes("=")) args.commitFrequency = t.split("=")[1] || "daily";
-      else args.commitFrequency = "daily";
-    } else if (t === "--commit-frequency-by-author")
+    else if (t === "--commit-frequency-by-author")
       args.commitFrequencyByAuthor = true;
     else if (t === "--commit-frequency-by-branch")
       args.commitFrequencyByBranch = true;
-    else if (t === "--branches") args.branches = true;
+    else if (t.startsWith("--commit-frequency")) {
+      // Support forms:
+      // --commit-frequency (defaults daily)
+      // --commit-frequency <value>
+      // ( = and [ ] handled earlier )
+      if (t.includes("=")) {
+        /* already handled earlier, ignore here */
+      } else {
+        const peek = argv[i + 1];
+        if (peek && !peek.startsWith("-")) {
+          args.commitFrequency = next() || "daily";
+        } else {
+          args.commitFrequency = "daily";
+        }
+      }
+    } else if (t === "--branches") args.branches = true;
     else if (t === "--branch-stats") args.branchStats = true;
     else if (t === "--total-commits") args.totalCommits = true;
     else if (t === "--average-commits-per-day")
@@ -401,22 +492,88 @@ function branchStats(repo, branches, cfg) {
 }
 // ---------------- Output helpers ----------------
 function outputPlain(sections) {
+  // Plain format rule: one logical fact per line in key[:more.key...] form
+  // Primitives: key: value
+  // Objects: key.sub: value
+  // Arrays: key[index]: value (primitive) OR key[index].sub: value (object)
+  // Empty collections still noted (e.g., key: [] / key: {})
   const order = Object.keys(sections);
-  order.forEach((k, idx) => {
-    const val = sections[k];
-    if (Array.isArray(val)) {
-      console.log(`${k}:`);
-      val.forEach((v) => {
-        console.log(JSON.stringify(v));
+  const lines = [];
+  const push = (l) => lines.push(l);
+  function emit(key, value, depth = 1) {
+    // emit flattens any value into one-or-more 'key: value' lines, recursing
+    // for objects/arrays. It pushes the resulting strings into lines[].
+    if (value === null || value === undefined) {
+      push(`${key}: null`);
+    } else if (Array.isArray(value)) {
+      if (value.length === 0) {
+        push(`${key}: []`);
+        return;
+      }
+      value.forEach((item, idx) => {
+        const base = `${key}[${idx}]`;
+        if (item === null || item === undefined) {
+          push(`${base}: null`);
+        } else if (Array.isArray(item)) {
+          // Rare: nested array, flatten primitive items
+          if (item.length === 0) push(`${base}: []`);
+          else item.forEach((inner, j) => emit(`${base}[${j}]`, inner));
+        } else if (typeof item === "object") {
+          const keys = Object.keys(item);
+          if (keys.length === 0) push(`${base}: {}`);
+          else {
+            // For arrays of objects we now omit the 'section[index].' prefix for cleaner output.
+            // Just print each field name directly (still grouped by blank line separation).
+            keys.forEach((k) => emit(k, item[k], depth + 1));
+          }
+        } else {
+          push(`${base}: ${item}`);
+        }
+        // Blank line separator between distinct objects/entries (not after last)
+        if (idx !== value.length - 1) push("");
       });
-    } else if (val && typeof val === "object") {
-      console.log(`${k}:`);
-      console.log(JSON.stringify(val));
+    } else if (typeof value === "object") {
+      // Special formatting: commitFrequencyByAuthor => blocks: author + its dates
+      if (
+        key === "commitFrequencyByAuthor" &&
+        depth === 1 &&
+        Object.values(value).every((v) => typeof v === "object" && v !== null)
+      ) {
+        const authorNames = Object.keys(value);
+        authorNames.forEach((author, idx) => {
+          push(`author: ${author}`);
+          const dateMap = value[author];
+          // Preserve exact keys; don't trim / reorder beyond sort by date ascending
+          Object.keys(dateMap)
+            .sort()
+            .forEach((d) => push(`${d}: ${dateMap[d]}`));
+          if (idx !== authorNames.length - 1) push("");
+        });
+        return;
+      }
+      const keys = Object.keys(value);
+      if (keys.length === 0) {
+        push(`${key}: {}`);
+      } else {
+        // If this is a top-level simple object (all primitive values), drop the 'section.' prefix.
+        const allPrimitive =
+          depth === 1 &&
+          keys.every((k) => {
+            const v = value[k];
+            return v === null || v === undefined || typeof v !== "object";
+          });
+        if (allPrimitive) {
+          keys.forEach((k) => emit(k, value[k], depth + 1));
+        } else {
+          keys.forEach((k) => emit(`${key}.${k}`, value[k], depth + 1));
+        }
+      }
     } else {
-      console.log(`${k}: ${val}`);
+      push(`${key}: ${value}`);
     }
-    if (idx !== order.length - 1) console.log("");
-  });
+  }
+  order.forEach((k) => emit(k, sections[k], 1));
+  console.log(lines.join("\n"));
 }
 // ---------------- Main ----------------
 (function main() {

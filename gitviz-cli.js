@@ -36,8 +36,9 @@ function parseArgs(argv) {
     format: "text",
     // contributor related
     contributors: false,
-    topContributors: null, // number
+    topContributors: null, // number (set via --top)
     contributorStats: false,
+    meta: false, // include meta section in JSON only when --meta is passed
     // frequency
     commitFrequency: null, // daily|weekly|monthly
     commitFrequencyByAuthor: false,
@@ -78,7 +79,6 @@ function parseArgs(argv) {
           case "--days":
             args.days = val ? parseInt(val, 10) || null : null;
             break;
-          case "--top-contributors":
           case "--top":
             args.topContributors = val ? parseInt(val, 10) || 10 : 10;
             args.contributors = true;
@@ -88,6 +88,9 @@ function parseArgs(argv) {
             break;
           case "--commit-frequency":
             args.commitFrequency = val || "daily";
+            break;
+          case "--meta":
+            args.meta = true;
             break;
           case "--since":
             if (val) args.since = val;
@@ -116,7 +119,6 @@ function parseArgs(argv) {
         case "--days":
           args.days = val ? parseInt(val, 10) || null : null;
           continue;
-        case "--top-contributors":
         case "--top":
           args.topContributors = val ? parseInt(val, 10) || 10 : 10;
           args.contributors = true;
@@ -124,8 +126,14 @@ function parseArgs(argv) {
         case "--format":
           if (val) args.format = val.toLowerCase();
           continue;
+        case "--json": // treat --json=anything as enabling json output
+          args.format = "json";
+          continue;
         case "--commit-frequency":
           args.commitFrequency = val || "daily";
+          continue;
+        case "--meta":
+          args.meta = true;
           continue;
         // since/until already handled below but accept here too
         case "--since":
@@ -145,8 +153,6 @@ function parseArgs(argv) {
     else if (t.startsWith("--until"))
       args.until = t.includes("=") ? t.split("=")[1] : next();
     else if (t === "--contributors") args.contributors = true;
-    else if (t === "--top-contributors")
-      args.topContributors = parseInt(next(), 10) || 10;
     else if (t === "--contributor-stats") args.contributorStats = true;
     else if (t === "--commit-frequency-by-author")
       args.commitFrequencyByAuthor = true;
@@ -176,10 +182,17 @@ function parseArgs(argv) {
     else if (t === "--file-stats") args.fileStats = true;
     else if (t === "--directory-stats") args.directoryStats = true;
     else if (t === "--format") args.format = (next() || "text").toLowerCase();
+    else if (t === "--json") args.format = "json";
+    else if (t === "--meta") args.meta = true;
     else if (t === "-h" || t === "--help") args.help = true;
     // Backward compatibility (ignored aesthetics): --width --top --limit-branches --no-* are ignored now
     else if (t === "--top") {
-      args.topContributors = parseInt(next(), 10) || 10;
+      const peek = argv[i + 1];
+      if (peek && !peek.startsWith("-")) {
+        args.topContributors = parseInt(next(), 10) || 10;
+      } else if (args.topContributors == null) {
+        args.topContributors = 10; // default if no number supplied
+      }
       args.contributors = true;
     } else if (t === "--limit-branches") {
       next(); /* ignore */
@@ -194,7 +207,7 @@ function parseArgs(argv) {
   return args;
 }
 function printHelp() {
-  const help = `Git Log Visualizer CLI (plain output)\nUsage: node gitviz.js [options]\nTime Filters:\n  --since <YYYY-MM-DD>       Start date inclusive\n  --until <YYYY-MM-DD>       End date inclusive\n  --days <n>                 (Legacy) last n days (ignored if --since provided)\nScope Filters:\n  --repo <path>              Repository path (default .)\n  --all                      Include all refs\n  --author <pattern>         Filter by author (git regex)\nOutput Format:\n  --format json|text         Default text\nContributors:\n  --contributors             List contributors (name,email,commits)\n  --top-contributors <n>     Top N contributors (implies --contributors)\n  --contributor-stats        Commits, lines added, lines removed per author\nCommit Frequency:\n  --commit-frequency[=g]     g=daily|weekly|monthly (default daily)\n  --commit-frequency-by-author  Per-author daily counts\n  --commit-frequency-by-branch  Commits per branch (time filtered)\nBranches:\n  --branches                 List branches (name,lastCommitDate,lastAuthor,tip)\n  --branch-stats             Commits, merges, unique authors per branch\nCommit Stats:\n  --total-commits            Total commits in range\n  --average-commits-per-day  Average commits per day in range\n  --commit-distribution      Daily commit counts (date->count)\nFiles/Directories:\n  --file-stats               Stats per file (changes,additions,deletions)\n  --directory-stats          Aggregated stats per directory\nGeneral:\n  -h, --help                 Show help\nExamples:\n  node gitviz.js --contributors --top-contributors 5 --format json\n  node gitviz.js --commit-frequency=weekly --since 2025-06-01 --until 2025-06-30\n  node gitviz.js --file-stats --directory-stats --all\n`;
+  const help = `Git Log Visualizer CLI (plain output)\nUsage: node gitviz.js [options]\nTime Filters:\n  --since <YYYY-MM-DD>       Start date inclusive\n  --until <YYYY-MM-DD>       End date inclusive\n  --days <n>                 (Legacy) last n days (ignored if --since provided)\nScope Filters:\n  --repo <path>              Repository path (default .)\n  --all                      Include all refs\n  --author <pattern>         Filter by author (git regex)\nOutput Format:\n  --format json|text         Default text\n  --json                     Shorthand for --format json\n  --meta                     Include meta (repo, since, until, age, generated) (JSON: section; text: prepended)\nContributors:\n  --contributors             List contributors (name,email,commits)\n  --top <n>                  Top N contributors (implies --contributors)\n  --contributor-stats        Commits, lines added, lines removed per author\nCommit Frequency:\n  --commit-frequency[=g]     g=daily|weekly|monthly (default daily)\n  --commit-frequency-by-author  Per-author daily counts\n  --commit-frequency-by-branch  Commits per branch (time filtered)\nBranches:\n  --branches                 List branches (name,lastCommitDate,lastAuthor,tip)\n  --branch-stats             Commits, merges, unique authors per branch\nCommit Stats:\n  --total-commits            Total commits in range\n  --average-commits-per-day  Average commits per day in range\n  --commit-distribution      Daily commit counts (date->count)\nFiles/Directories:\n  --file-stats               Stats per file (changes,additions,deletions)\n  --directory-stats          Aggregated stats per directory\nGeneral:\n  -h, --help                 Show help\nExamples:\n  node gitviz.js --contributors --top 5 --json --meta\n  node gitviz.js --commit-frequency=weekly --since 2025-06-01 --until 2025-06-30\n  node gitviz.js --file-stats --directory-stats --all\n`;
   console.log(help.trimEnd());
 }
 // ---------------- Git helpers ----------------
@@ -464,7 +477,8 @@ function branchStats(repo, branches, cfg) {
   return branches.map((b) => {
     let commits = 0,
       merges = 0,
-      authors = 0;
+      authors = 0,
+      authorList = [];
     try {
       commits =
         parseInt(
@@ -483,11 +497,27 @@ function branchStats(repo, branches, cfg) {
         ) || 0;
     } catch {}
     try {
-      const out = runGit(["log", b.name, "--pretty=format:%an", ...t], repo);
-      const set = new Set(out.split(/\r?\n/).filter(Boolean));
+      const fmt = "%an%x01%ae"; // name + email
+      const args = ["log", b.name, `--pretty=format:${fmt}`, ...t];
+      if (cfg.author) args.push(`--author=${cfg.author}`);
+      const out = runGit(args, repo);
+      const set = new Set();
+      out
+        .split(/\r?\n/)
+        .filter(Boolean)
+        .forEach((line) => {
+          const parts = line.split("\x01");
+          if (parts.length === 2) {
+            const entry = `${parts[0]} <${parts[1]}>`;
+            set.add(entry);
+          } else {
+            set.add(line); // fallback
+          }
+        });
       authors = set.size;
+      authorList = Array.from(set).sort();
     } catch {}
-    return { branch: b.name, commits, merges, authors };
+    return { branch: b.name, commits, merges, authors, authorList };
   });
 }
 // ---------------- Output helpers ----------------
@@ -510,6 +540,11 @@ function outputPlain(sections) {
         push(`${key}: []`);
         return;
       }
+      // Special case: authorList (array of strings) -> emit each as 'author: value'
+      if (key === "authorList" && value.every((v) => typeof v === "string")) {
+        value.forEach((item) => push(`author: ${item}`));
+        return;
+      }
       value.forEach((item, idx) => {
         const base = `${key}[${idx}]`;
         if (item === null || item === undefined) {
@@ -530,7 +565,7 @@ function outputPlain(sections) {
           push(`${base}: ${item}`);
         }
         // Blank line separator between distinct objects/entries (not after last)
-        if (idx !== value.length - 1) push("");
+        if (idx !== value.length - 1 && key !== "authorList") push("");
       });
     } else if (typeof value === "object") {
       // Special formatting: commitFrequencyByAuthor => blocks: author + its dates
@@ -720,21 +755,34 @@ function outputPlain(sections) {
     sections.directoryStats = directoryStats(fsList);
   }
   // Always include meta if JSON (not counted as a requested section but helpful)
-  const anyRequested = Object.keys(sections).length > 0;
+  const anyRequested = Object.keys(sections).length > 0 || args.meta;
   if (!anyRequested) {
     printHelp();
     return;
   }
   if (args.format === "json") {
-    sections.meta = {
-      repo: args.repo,
-      since: effectiveSince || null,
-      until: effectiveUntil || null,
-      repoAgeDays,
-      generated: new Date().toISOString(),
-    };
+    if (args.meta) {
+      sections.meta = {
+        repo: args.repo,
+        since: effectiveSince || null,
+        until: effectiveUntil || null,
+        repoAgeDays,
+        generated: new Date().toISOString(),
+      };
+    }
     console.log(JSON.stringify(sections, null, 2));
   } else {
-    outputPlain(sections);
+    if (args.meta) {
+      const metaLines = [
+        `repo: ${args.repo}`,
+        `since: ${effectiveSince || "null"}`,
+        `until: ${effectiveUntil || "null"}`,
+        `repoAgeDays: ${repoAgeDays}`,
+        `generated: ${new Date().toISOString()}`,
+      ];
+      console.log(metaLines.join("\n"));
+      if (Object.keys(sections).length) console.log(""); // blank line only if more follows
+    }
+    if (Object.keys(sections).length) outputPlain(sections);
   }
 })();

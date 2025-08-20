@@ -54,6 +54,7 @@ function parseArgs(argv) {
         fileStats: false,
         directoryStats: false,
         help: false,
+        fullHistory: false,
     };
     for (let i = 0; i < argv.length; i++) {
         const t = argv[i];
@@ -185,6 +186,7 @@ function parseArgs(argv) {
         else if (t === "--json") args.format = "json";
         else if (t === "--meta") args.meta = true;
         else if (t === "-h" || t === "--help") args.help = true;
+        else if (t === "--full-history") args.fullHistory = true;
         // Backward compatibility (ignored aesthetics): --width --top --limit-branches --no-* are ignored now
         else if (t === "--top") {
             const peek = argv[i + 1];
@@ -213,7 +215,12 @@ function printHelp() {
 // ---------------- Git helpers ----------------
 function runGit(args, cwd) {
     try {
-        return execFileSync("git", args, { cwd, encoding: "utf8" });
+        // Increase maxBuffer to handle very large histories (default 1MB is too small for giant logs)
+        return execFileSync("git", args, {
+            cwd,
+            encoding: "utf8",
+            maxBuffer: 1024 * 1024 * 50,
+        }); // 50MB
     } catch (e) {
         const msg = e.stderr || e.stdout || e.message || "git command failed";
         console.error(msg.trim());
@@ -257,7 +264,8 @@ function timeArgs(args) {
 // Collect basic commits (no numstat)
 function collectCommitsBasic(cfg) {
     const sep = "\u0001";
-    const format = `%H${sep}%h${sep}%an${sep}%ae${sep}%ad${sep}%P`;
+    // Use committer date (%cd) so filtering (--since/--until) and displayed dates align (git filters by committer date)
+    const format = `%H${sep}%h${sep}%an${sep}%ae${sep}%cd${sep}%P`;
     const cmd = ["log", "--date=short", `--pretty=format:${format}`];
     if (cfg.all) cmd.splice(1, 0, "--all");
     if (cfg.author) cmd.push(`--author=${cfg.author}`);
@@ -284,8 +292,14 @@ function collectCommitsBasic(cfg) {
 // Collect commits with numstat if needed (file/author line stats)
 function collectCommitsWithNumstat(cfg) {
     const sep = "\u0001";
-    const header = `commit${sep}%H${sep}%an${sep}%ae${sep}%ad`;
-    const cmd = ["log", "--date=short", `--pretty=format:${header}`, "--numstat"];
+    // Use committer date (%cd) for consistency with filtering
+    const header = `commit${sep}%H${sep}%an${sep}%ae${sep}%cd`;
+    const cmd = [
+        "log",
+        "--date=short",
+        `--pretty=format:${header}`,
+        "--numstat",
+    ];
     if (cfg.all) cmd.splice(1, 0, "--all");
     if (cfg.author) cmd.push(`--author=${cfg.author}`);
     cmd.push(...timeArgs(cfg));
@@ -333,7 +347,8 @@ function branchLastAuthor(repo, branch, cfg) {
         "log",
         "-1",
         "--date=short",
-        "--pretty=format:%an%x01%ae%x01%ad",
+        // committer date for branch tip
+        "--pretty=format:%an%x01%ae%x01%cd",
         branch,
     ];
     const out = runGit(base, repo).trim();
@@ -393,7 +408,7 @@ function groupDailyByAuthor(commits) {
     return map;
 }
 function frequencyAggregate(commits, granularity) {
-    const agg = {};
+    const raw = {};
     commits.forEach((c) => {
         let key = c.date; // YYYY-MM-DD
         if (granularity === "weekly") {
@@ -404,9 +419,14 @@ function frequencyAggregate(commits, granularity) {
             const week = Math.ceil(dayNum / 7);
             key = `${d.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
         } else if (granularity === "monthly") key = c.date.slice(0, 7);
-        agg[key] = (agg[key] || 0) + 1;
+        raw[key] = (raw[key] || 0) + 1;
     });
-    return agg;
+    // Sort keys chronologically (lexicographic works for YYYY-MM-DD, YYYY-MM, YYYY-Www formats)
+    const sorted = {};
+    Object.keys(raw)
+        .sort()
+        .forEach((k) => (sorted[k] = raw[k]));
+    return sorted;
 }
 function calcCommitDistribution(commits) {
     return groupByDate(commits);
@@ -485,7 +505,7 @@ function branchStats(repo, branches, cfg) {
                     runGit(["rev-list", b.name, "--count", ...t], repo).trim(),
                     10
                 ) || 0;
-        } catch { }
+        } catch {}
         try {
             merges =
                 parseInt(
@@ -495,15 +515,14 @@ function branchStats(repo, branches, cfg) {
                     ).trim(),
                     10
                 ) || 0;
-        } catch { }
+        } catch {}
         try {
             const fmt = "%an%x01%ae"; // name + email
             const args = ["log", b.name, `--pretty=format:${fmt}`, ...t];
             if (cfg.author) args.push(`--author=${cfg.author}`);
             const out = runGit(args, repo);
             const set = new Set();
-            out
-                .split(/\r?\n/)
+            out.split(/\r?\n/)
                 .filter(Boolean)
                 .forEach((line) => {
                     const parts = line.split("\x01");
@@ -516,7 +535,7 @@ function branchStats(repo, branches, cfg) {
                 });
             authors = set.size;
             authorList = Array.from(set).sort();
-        } catch { }
+        } catch {}
         return { branch: b.name, commits, merges, authors, authorList };
     });
 }
@@ -624,13 +643,22 @@ function outputPlain(sections) {
     ensureRepo(args.repo);
     // Determine since/until fallback using repo age if not provided
     if (!args.since && !args.until && !args.days) {
-        // default: last 30 days if commits exist
-        args.days = 30;
+        // default: last 30 days unless user explicitly wants full history
+        if (!args.fullHistory) args.days = 30;
     }
-    // If until not given but since given, until=today
-    if (args.since && !args.until) args.until = fmtDate(new Date());
-    if (args.until && !args.since && args.days) {
-        // ignore days if until provided but not since
+    // Normalize implicit / explicit date window now so downstream code & meta reflect it.
+    const today = fmtDate(new Date());
+    if (args.days && !args.since && !args.until) {
+        const end = new Date();
+        const start = new Date();
+        start.setDate(end.getDate() - (args.days - 1));
+        args.since = fmtDate(start);
+        args.until = fmtDate(end);
+    } else if (args.since && !args.until) {
+        // If until not given but since given, until=today
+        args.until = today;
+    } else if (args.until && !args.since && args.days) {
+        // Derive since from until & days
         const end = new Date(args.until + "T00:00:00");
         const start = new Date(end);
         start.setDate(end.getDate() - (args.days - 1));
@@ -767,6 +795,11 @@ function outputPlain(sections) {
                 since: effectiveSince || null,
                 until: effectiveUntil || null,
                 repoAgeDays,
+                firstCommitDate: firstDate || null,
+                rangeDays:
+                    effectiveSince && effectiveUntil
+                        ? diffDaysInclusive(effectiveSince, effectiveUntil)
+                        : null,
                 generated: new Date().toISOString(),
             };
         }

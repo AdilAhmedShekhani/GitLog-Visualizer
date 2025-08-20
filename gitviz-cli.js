@@ -209,7 +209,7 @@ function parseArgs(argv) {
     return args;
 }
 function printHelp() {
-    const help = `Git Log Visualizer CLI (plain output)\nUsage: node gitviz.js [options]\nTime Filters:\n  --since <YYYY-MM-DD>       Start date inclusive\n  --until <YYYY-MM-DD>       End date inclusive\n  --days <n>                 (Legacy) last n days (ignored if --since provided)\nScope Filters:\n  --repo <path>              Repository path (default .)\n  --all                      Include all refs\n  --author <pattern>         Filter by author (git regex)\nOutput Format:\n  --format json|text         Default text\n  --json                     Shorthand for --format json\n  --meta                     Include meta (repo, since, until, age, generated) (JSON: section; text: prepended)\nContributors:\n  --contributors             List contributors (name,email,commits)\n  --top <n>                  Top N contributors (implies --contributors)\n  --contributor-stats        Commits, lines added, lines removed per author\nCommit Frequency:\n  --commit-frequency[=g]     g=daily|weekly|monthly (default daily)\n  --commit-frequency-by-author  Per-author daily counts\n  --commit-frequency-by-branch  Commits per branch (time filtered)\nBranches:\n  --branches                 List branches (name,lastCommitDate,lastAuthor,tip)\n  --branch-stats             Commits, merges, unique authors per branch\nCommit Stats:\n  --total-commits            Total commits in range\n  --average-commits-per-day  Average commits per day in range\n  --commit-distribution      Daily commit counts (date->count)\nFiles/Directories:\n  --file-stats               Stats per file (changes,additions,deletions)\n  --directory-stats          Aggregated stats per directory\nGeneral:\n  -h, --help                 Show help\nExamples:\n  node gitviz.js --contributors --top 5 --json --meta\n  node gitviz.js --commit-frequency=weekly --since 2025-06-01 --until 2025-06-30\n  node gitviz.js --file-stats --directory-stats --all\n`;
+    const help = `GitViz CLI (plain output)\nUsage: node gitviz.js [options]\nTime Filters:\n  --since <YYYY-MM-DD>       Start date inclusive\n  --until <YYYY-MM-DD>       End date inclusive\n  --days <n>                 Last n days (ignored if --since provided)\n  --full-history             Ignore all the time ranges(can cause performance issues)\nScope Filters:\n  --repo <path>              Repository path (default .)\n  --all                      Include all refs\n  --author <pattern>         Filter by author (git regex)\nOutput Format:\n  --format json|text         Default text\n  --json                     Shorthand for --format json\n  --meta                     Include meta (repo, since, until, age, generated) (JSON: section; text: prepended)\nContributors:\n  --contributors             List contributors (name,email,commits)\n  --top <n>                  Top N contributors (implies --contributors)\n  --contributor-stats        Commits, lines added, lines removed per author\nCommit Frequency:\n  --commit-frequency[=g]     g=daily|weekly|monthly (default daily)\n  --commit-frequency-by-author  Per-author daily counts\n  --commit-frequency-by-branch  Commits per branch (time filtered)\nBranches:\n  --branches                 List branches (name,lastCommitDate,lastAuthor,tip)\n  --branch-stats             Commits, merges, unique authors per branch\nCommit Stats:\n  --total-commits            Total commits in range\n  --average-commits-per-day  Average commits per day in range\nFiles/Directories:\n  --file-stats               Stats per file (changes,additions,deletions)\n  --directory-stats          Aggregated stats per directory\nGeneral:\n  -h, --help                 Show help\nExamples:\n  node gitviz.js --contributors --top 5 --json --meta\n  node gitviz.js --commit-frequency=weekly --since 2025-06-01 --until 2025-06-30\n  node gitviz.js --file-stats --directory-stats --all\n`;
     console.log(help.trimEnd());
 }
 // ---------------- Git helpers ----------------
@@ -336,8 +336,8 @@ function listBranches(repo) {
     const branches = [];
     out.split(/\r?\n/).forEach((l) => {
         if (!l.trim()) return;
-        const [name, tip, date] = l.split(/\t/);
-        branches.push({ name, tip, date });
+        const [branch, tip, date] = l.split(/\t/);
+        branches.push({ branch, tip, date });
     });
     return branches;
 }
@@ -486,9 +486,9 @@ function branchCommitCounts(repo, branches, cfg) {
     const counts = {};
     const t = timeArgs(cfg); // since/until
     branches.forEach((b) => {
-        const cmd = ["rev-list", b.name, "--count", ...t];
+        const cmd = ["rev-list", b.branch, "--count", ...t];
         const out = runGit(cmd, repo).trim();
-        counts[b.name] = parseInt(out, 10) || 0;
+        counts[b.branch] = parseInt(out, 10) || 0;
     });
     return counts;
 }
@@ -502,7 +502,7 @@ function branchStats(repo, branches, cfg) {
         try {
             commits =
                 parseInt(
-                    runGit(["rev-list", b.name, "--count", ...t], repo).trim(),
+                    runGit(["rev-list", b.branch, "--count", ...t], repo).trim(),
                     10
                 ) || 0;
         } catch {}
@@ -510,7 +510,7 @@ function branchStats(repo, branches, cfg) {
             merges =
                 parseInt(
                     runGit(
-                        ["rev-list", b.name, "--merges", "--count", ...t],
+                        ["rev-list", b.branch, "--merges", "--count", ...t],
                         repo
                     ).trim(),
                     10
@@ -518,7 +518,7 @@ function branchStats(repo, branches, cfg) {
         } catch {}
         try {
             const fmt = "%an%x01%ae"; // name + email
-            const args = ["log", b.name, `--pretty=format:${fmt}`, ...t];
+            const args = ["log", b.branch, `--pretty=format:${fmt}`, ...t];
             if (cfg.author) args.push(`--author=${cfg.author}`);
             const out = runGit(args, repo);
             const set = new Set();
@@ -536,7 +536,7 @@ function branchStats(repo, branches, cfg) {
             authors = set.size;
             authorList = Array.from(set).sort();
         } catch {}
-        return { branch: b.name, commits, merges, authors, authorList };
+        return { branch: b.branch, commits, merges, authors, authorList };
     });
 }
 // ---------------- Output helpers ----------------
@@ -745,9 +745,9 @@ function outputPlain(sections) {
     }
     if (args.branches) {
         const branches = listBranches(args.repo).map((b) => {
-            const last = branchLastAuthor(args.repo, b.name, args) || {};
+            const last = branchLastAuthor(args.repo, b.branch, args) || {};
             return {
-                name: b.name,
+                name: b.branch,
                 tip: b.tip,
                 lastCommitDate: b.date,
                 lastAuthor: last.authorName || null,

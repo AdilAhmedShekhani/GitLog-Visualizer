@@ -747,7 +747,7 @@ function outputPlain(sections) {
         const branches = listBranches(args.repo).map((b) => {
             const last = branchLastAuthor(args.repo, b.branch, args) || {};
             return {
-                name: b.branch,
+                branch: b.branch,
                 tip: b.tip,
                 lastCommitDate: b.date,
                 lastAuthor: last.authorName || null,

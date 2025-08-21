@@ -30,8 +30,10 @@ You choose flags; output only includes requested blocks. No colors; minimal nois
 
 ## 2. Argument Forms
 
+### Boolean falgs:
 Boolean flags stand alone: `--all`, `--contributors`, etc.
 
+### Key-value pairs format:
 Every value‑taking flag accepts all forms:
 
 - Space: `--format json`
@@ -39,25 +41,28 @@ Every value‑taking flag accepts all forms:
 - Brackets: `--format[json]`
 - Some also accept the value as the next token.
 
-Time / range flags:
+### Time / range flags: Priority Order (Highest to Lowest):
+- `--full-history` → Overrides everything, uses entire repo history
+  - Example: `node gitviz-cli.js --commit-frequency --days 5 --since 2025-08-14 --until 2025-08-20 --full-history`, all filters got ignored, from beginning to the today
+- `--since`/`--until` → Overrides --days
+  - Example: `node gitviz-cli.js --commit-frequency --days 5 --since 2025-08-14 --until 2025-08-20`, days got ignored.
+- `--days` → Only works if none of the above are specified
+  - Example: `node gitviz-cli.js --commit-frequency --days 5`, 5 days back from today.
+- Default 30-day window → Fallback when nothing is specified
 
-- `--since YYYY-MM-DD`
-- `--until YYYY-MM-DD`
-- `--days N` (backward sliding window; materialized into since/until)
-- `--full-history` (ignore default 30‑day window)
 
-Scope / filter:
+### Scope / filter:
 
 - `--repo <path>` (default `.`)
 - `--all` (all refs)
 - `--author <pattern>` (git author regex)
 
-Output selection:
+### Output selection:
 
 - `--format json` or `--json`
 - `--meta` (add meta section)
 
-Help: `-h` / `--help`
+### Help: `-h` / `--help`
 
 ---
 

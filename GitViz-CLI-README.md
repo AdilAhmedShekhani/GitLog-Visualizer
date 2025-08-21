@@ -10,19 +10,19 @@ Default output is plain text: one fact per line, easy to scan or pipe into `find
 
 Time window behavior:
 
-- If you specify none of `--since`, `--until`, or `--days`, a 30‑day rolling window is applied (fast + relevant).
-- Use `--full-history` to override and analyze the entire lifetime (first commit → today) unless you supply your own explicit range.
-- Any explicit range flag disables the default.
+-   If you specify none of `--since`, `--until`, or `--days`, a 30‑day rolling window is applied (fast + relevant).
+-   Use `--full-history` to override and analyze the entire lifetime (first commit → today) unless you supply your own explicit range.
+-   Any explicit range flag disables the default.
 
 ---
 
 ## 1. What It Helps You Answer
 
-- Who contributes (and how much)?
-- How many commits per day / week / month? Per author? Per branch?
-- Which branches are active / merged? Unique authors per branch?
-- Which files / directories churn the most?
-- Line additions / deletions per contributor?
+-   Who contributes (and how much)?
+-   How many commits per day / week / month? Per author? Per branch?
+-   Which branches are active / merged? Unique authors per branch?
+-   Which files / directories churn the most?
+-   Line additions / deletions per contributor?
 
 You choose flags; output only includes requested blocks. No colors; minimal noise.
 
@@ -31,36 +31,38 @@ You choose flags; output only includes requested blocks. No colors; minimal nois
 ## 2. Argument Forms
 
 ### Boolean falgs:
+
 Boolean flags stand alone: `--all`, `--contributors`, etc.
 
 ### Key-value pairs format:
+
 Every value‑taking flag accepts all forms:
 
-- Space: `--format json`
-- Equals: `--format=json`
-- Brackets: `--format[json]`
-- Some also accept the value as the next token.
+-   Space: `--format json`
+-   Equals: `--format=json`
+-   Brackets: `--format[json]`
+-   Some also accept the value as the next token.
 
 ### Time / range flags: Priority Order (Highest to Lowest):
-- `--full-history` → Overrides everything, uses entire repo history
-  - Example: `node gitviz-cli.js --commit-frequency --days 5 --since 2025-08-14 --until 2025-08-20 --full-history`, all filters got ignored, from beginning to the today
-- `--since`/`--until` → Overrides --days
-  - Example: `node gitviz-cli.js --commit-frequency --days 5 --since 2025-08-14 --until 2025-08-20`, days got ignored.
-- `--days` → Only works if none of the above are specified
-  - Example: `node gitviz-cli.js --commit-frequency --days 5`, 5 days back from today.
-- Default 30-day window → Fallback when nothing is specified
 
+-   `--full-history` → Overrides everything, uses entire repo history
+    -   Example: `node gitviz.js --commit-frequency --days 5 --since 2025-08-14 --until 2025-08-20 --full-history`, all filters got ignored, from beginning to the today
+-   `--since`/`--until` → Overrides --days
+    -   Example: `node gitviz.js --commit-frequency --days 5 --since 2025-08-14 --until 2025-08-20`, days got ignored.
+-   `--days` → Only works if none of the above are specified
+    -   Example: `node gitviz.js --commit-frequency --days 5`, 5 days back from today.
+-   Default 30-day window → Fallback when nothing is specified
 
 ### Scope / filter:
 
-- `--repo <path>` (default `.`)
-- `--all` (all refs)
-- `--author <pattern>` (git author regex)
+-   `--repo <path>` (default `.`)
+-   `--all` (all refs)
+-   `--author <pattern>` (git author regex)
 
 ### Output selection:
 
-- `--format json` or `--json`
-- `--meta` (add meta section)
+-   `--format json` or `--json`
+-   `--meta` (add meta section)
 
 ### Help: `-h` / `--help`
 
@@ -72,10 +74,10 @@ Every value‑taking flag accepts all forms:
 
 Rules:
 
-- One logical fact per line: `key: value`.
-- Arrays of objects print as blocks separated by one blank line.
-- Maps (date → count) print directly as lines.
-- Meta (if requested) prints first.
+-   One logical fact per line: `key: value`.
+-   Arrays of objects print as blocks separated by one blank line.
+-   Maps (date → count) print directly as lines.
+-   Meta (if requested) prints first.
 
 Example meta:
 
@@ -95,15 +97,15 @@ Auto 30‑day window example:
 
 ```json
 {
-  "meta": {
-    "repo": ".",
-    "since": "2025-07-19",
-    "until": "2025-08-17",
-    "repoAgeDays": 7420,
-    "firstCommitDate": "2005-04-07",
-    "rangeDays": 30,
-    "generated": "2025-08-17T02:13:25.741Z"
-  }
+    "meta": {
+        "repo": ".",
+        "since": "2025-07-19",
+        "until": "2025-08-17",
+        "repoAgeDays": 7420,
+        "firstCommitDate": "2005-04-07",
+        "rangeDays": 30,
+        "generated": "2025-08-17T02:13:25.741Z"
+    }
 }
 ```
 
@@ -111,15 +113,15 @@ Full history example:
 
 ```json
 {
-  "meta": {
-    "repo": ".",
-    "since": "2005-04-07",
-    "until": "2025-08-17",
-    "repoAgeDays": 7420,
-    "firstCommitDate": "2005-04-07",
-    "rangeDays": 7420,
-    "generated": "2025-08-17T02:15:41.123Z"
-  }
+    "meta": {
+        "repo": ".",
+        "since": "2005-04-07",
+        "until": "2025-08-17",
+        "repoAgeDays": 7420,
+        "firstCommitDate": "2005-04-07",
+        "rangeDays": 7420,
+        "generated": "2025-08-17T02:15:41.123Z"
+    }
 }
 ```
 
@@ -129,10 +131,10 @@ Full history example:
 
 | Flag                           | Description                                                                       |
 | ------------------------------ | --------------------------------------------------------------------------------- |
-| `--all`                        | Include all refs
+| `--all`                        | Include all refs                                                                  |
 | `--contributors`               | List authors with commit counts.                                                  |
 | `--top N`                      | Top N contributors (implies `--contributors`).                                    |
-| `--author <pattern>`           | Filter by author | 
+| `--author <pattern>`           | Filter by author                                                                  |
 | `--contributor-stats`          | Commits + additions + deletions per author.                                       |
 | `--commit-frequency[=g]`       | Commits grouped by `g` = `daily` (default), `weekly`, `monthly`.                  |
 | `--commit-frequency-by-author` | Per-author daily commit counts.                                                   |
@@ -157,7 +159,7 @@ Time & scope modifiers: `--since`, `--until`, `--days`, `--full-history`, `--rep
 ### Contributors
 
 ```
-node gitviz-cli.js --contributors
+node gitviz.js --contributors
 ```
 
 ```
@@ -173,7 +175,7 @@ commits: 4
 ### Commit Frequency (Daily)
 
 ```
-node gitviz-cli.js --commit-frequency daily
+node gitviz.js --commit-frequency daily
 ```
 
 ```
@@ -187,7 +189,7 @@ node gitviz-cli.js --commit-frequency daily
 ### Branch Stats
 
 ```
-node gitviz-cli.js --branches --branch-stats
+node gitviz.js --branches --branch-stats
 ```
 
 (Two arrays: branches + branchStats when in JSON; tables merged by dashboard UI.)
@@ -197,21 +199,21 @@ node gitviz-cli.js --branches --branch-stats
 ## 6. Combining Flags
 
 ```
-node gitviz-cli.js --commit-frequency=weekly --total-commits --average-commits-per-day --since 2025-08-01 --until 2025-08-31
+node gitviz.js --commit-frequency=weekly --total-commits --average-commits-per-day --since 2025-08-01 --until 2025-08-31
 ```
 
 ```
-node gitviz-cli.js --file-stats --directory-stats --since 2025-08-10
+node gitviz.js --file-stats --directory-stats --since 2025-08-10
 ```
 
 ```
-node gitviz-cli.js --branches --branch-stats --commit-frequency-by-branch
+node gitviz.js --branches --branch-stats --commit-frequency-by-branch
 ```
 
 JSON with meta:
 
 ```
-node gitviz-cli.js --contributors --json --meta
+node gitviz.js --contributors --json --meta
 ```
 
 ---
@@ -221,7 +223,7 @@ node gitviz-cli.js --contributors --json --meta
 Goal: last 14 days, all refs, one author pattern, churn + frequencies.
 
 ```
-node gitviz-cli.js \
+node gitviz.js \
   --since 2025-08-04 \
   --until 2025-08-17 \
   --all \
@@ -241,17 +243,17 @@ Excerpt of JSON (meta fields updated):
 
 ```json
 {
-  "totalCommits": 12,
-  "averageCommitsPerDay": 3,
-  "meta": {
-    "repo": ".",
-    "since": "2025-08-14",
-    "until": "2025-08-17",
-    "repoAgeDays": 7420,
-    "firstCommitDate": "2005-04-07",
-    "rangeDays": 4,
-    "generated": "2025-08-17T03:29:46.207Z"
-  }
+    "totalCommits": 12,
+    "averageCommitsPerDay": 3,
+    "meta": {
+        "repo": ".",
+        "since": "2025-08-14",
+        "until": "2025-08-17",
+        "repoAgeDays": 7420,
+        "firstCommitDate": "2005-04-07",
+        "rangeDays": 4,
+        "generated": "2025-08-17T03:29:46.207Z"
+    }
 }
 ```
 
@@ -259,17 +261,17 @@ Excerpt of JSON (meta fields updated):
 
 ## 8. Tips
 
-- Asking for nothing prints help.
-- Empty sets just show empty arrays/objects.
-- Use JSON for pipelines; text for quick terminal scans.
-- `--full-history` can be slow on massive repos; prefer range narrowing when exploring.
+-   Asking for nothing prints help.
+-   Empty sets just show empty arrays/objects.
+-   Use JSON for pipelines; text for quick terminal scans.
+-   `--full-history` can be slow on massive repos; prefer range narrowing when exploring.
 
 ---
 
 ## 9. Exit Codes
 
-- 0 = success
-- Non‑zero = git failure or invalid repo path
+-   0 = success
+-   Non‑zero = git failure or invalid repo path
 
 ---
 

@@ -16,9 +16,9 @@ const CONFIG = {
     DIRECTORY_LIMIT: 3,
 };
 
-let BASE_CMD = `node gitviz-cli.js`;
+let BASE_CMD = `node gitviz.js`;
 
-// ------------------------- gitviz-cli MANAGEMENT ------------------------
+// ------------------------- GitViz MANAGEMENT ------------------------
 function buildGitVizArgs() {
     // Command Line Args
     let argsStr = "";
@@ -36,7 +36,7 @@ function runGitVizCmdWithFlags(flagsStr) {
 
     try {
         const rawOutput = execSync(command, { encoding: "utf8" });
-        // In the case of wrong flags, the gitviz-cli.js outputs help text
+        // In the case of wrong flags, the gitviz.js outputs help text
         if (rawOutput.startsWith("GitViz")) {
             console.warn(`The provided command/flags aren't valid!, see: ${command}`);
             process.exit(1);
@@ -67,14 +67,14 @@ function aggregateCommitFrequencies(dailyFrequencyObj) {
     // Sort keys chronologically (same as CLI does)
     const sortedWeekly = {};
     Object.keys(weekly).sort().forEach(k => sortedWeekly[k] = weekly[k]);
-    
+
     const sortedMonthly = {};
     Object.keys(monthly).sort().forEach(k => sortedMonthly[k] = monthly[k]);
 
-    return { 
-        daily: dailyFrequencyObj, 
-        weekly: sortedWeekly, 
-        monthly: sortedMonthly 
+    return {
+        daily: dailyFrequencyObj,
+        weekly: sortedWeekly,
+        monthly: sortedMonthly
     };
 }
 
@@ -139,11 +139,11 @@ function renderTable(rowMatrix, columnDefinitions, colorEnabled = true) {
     const dividerRow = columnDefinitions.map((col) => "─".repeat(Math.max(0, col.width))).join(" ");
     const bodyRows = rowMatrix
         .map((r) => r
-                .map((cell, idx) => {
-                    const def = columnDefinitions[idx];
-                    return padCell(cell == null ? "" : cell, def.width, def.align);
-                })
-                .join(" ")
+            .map((cell, idx) => {
+                const def = columnDefinitions[idx];
+                return padCell(cell == null ? "" : cell, def.width, def.align);
+            })
+            .join(" ")
         )
         .join("\n");
     return headerRow + "\n" + dividerRow + "\n" + bodyRows;
@@ -161,7 +161,7 @@ function getTerminalWidth() {
     return process.stdout.columns || 100;
 }
 function horizontalRule(char = "─") {
-	return char.repeat(Math.min(getTerminalWidth(), 120));
+    return char.repeat(Math.min(getTerminalWidth(), 120));
 }
 function centerText(text) {
     // const width = 300;
@@ -172,11 +172,11 @@ function centerText(text) {
     const right = padSize - left;
     return " ".repeat(left) + text + " ".repeat(right);
 }
-function printSectionHeader(title, color="cyan", insertNewLineBefore=true, insertNewLineAfter=false) {
-	insertNewLineBefore ? console.log() : null;
+function printSectionHeader(title, color = "cyan", insertNewLineBefore = true, insertNewLineAfter = false) {
+    insertNewLineBefore ? console.log() : null;
     console.log(colorize(colorize(centerText(` ${title} `), color), "bold"));
     console.log(horizontalRule());
-	insertNewLineAfter ? console.log() : null;
+    insertNewLineAfter ? console.log() : null;
 }
 
 // ----------------------------- Sections --------------------------------
@@ -356,37 +356,37 @@ function main() {
     const gitvizArgs = buildGitVizArgs();
     const gitvizData = runGitVizCmdWithFlags(gitvizArgs);
 
-	printSectionHeader("GitViz CLI Dashboard");
+    printSectionHeader("GitViz CLI Dashboard");
     showMeta(gitvizData.meta);
-	
-	printSectionHeader("Commit Frequency");
-    aggregatedCommitFrequencyData = aggregateCommitFrequencies(gitvizData.commitFrequency);
-    if (aggregatedCommitFrequencyData.daily) { 
-		console.log(colorize("Daily:", "yellow"))
-		showCommitFrequency(aggregatedCommitFrequencyData.daily); 
-	}
-    if (aggregatedCommitFrequencyData.weekly) { 
-		console.log(colorize("Weekly:", "green"))
-		showCommitFrequency(aggregatedCommitFrequencyData.weekly); 
-	}
-    if (aggregatedCommitFrequencyData.monthly) { 
-		console.log(colorize("Monthly:", "blue"))
-		showCommitFrequency(aggregatedCommitFrequencyData.monthly); 
-	}
 
-	printSectionHeader("Branches (local)");
-	showBranches(gitvizData.branches, gitvizData.branchStats);
-	
-	printSectionHeader(`Contributors (top ${CONFIG.CONTRIBUTORS_LIMIT})`);
+    printSectionHeader("Commit Frequency");
+    aggregatedCommitFrequencyData = aggregateCommitFrequencies(gitvizData.commitFrequency);
+    if (aggregatedCommitFrequencyData.daily) {
+        console.log(colorize("Daily:", "yellow"))
+        showCommitFrequency(aggregatedCommitFrequencyData.daily);
+    }
+    if (aggregatedCommitFrequencyData.weekly) {
+        console.log(colorize("Weekly:", "green"))
+        showCommitFrequency(aggregatedCommitFrequencyData.weekly);
+    }
+    if (aggregatedCommitFrequencyData.monthly) {
+        console.log(colorize("Monthly:", "blue"))
+        showCommitFrequency(aggregatedCommitFrequencyData.monthly);
+    }
+
+    printSectionHeader("Branches (local)");
+    showBranches(gitvizData.branches, gitvizData.branchStats);
+
+    printSectionHeader(`Contributors (top ${CONFIG.CONTRIBUTORS_LIMIT})`);
     showContributors(gitvizData.contributors, gitvizData.contributorStats);
-	
-	printSectionHeader(`Files Stats (top ${CONFIG.FILES_LIMIT})`);
+
+    printSectionHeader(`Files Stats (top ${CONFIG.FILES_LIMIT})`);
     showFileStats(gitvizData.fileStats);
-	
-	printSectionHeader(`Directory Stats (top ${CONFIG.DIRECTORY_LIMIT})`);
+
+    printSectionHeader(`Directory Stats (top ${CONFIG.DIRECTORY_LIMIT})`);
     showDirectoryStats(gitvizData.directoryStats);
 
-	console.log("\nGitHub: https://github.com/AdilAhmedShekhani/GitViz")
+    console.log("\nGitHub: https://github.com/AdilAhmedShekhani/GitViz")
 }
 
 main();

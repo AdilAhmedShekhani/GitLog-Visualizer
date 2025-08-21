@@ -154,6 +154,28 @@ input[type="text"]:focus {
     font-family: var(--font-mono);
     font-size: 14px;
     color: var(--text-secondary);
+    transition: all 0.3s ease;
+}
+
+.status-bar.status-error {
+    background-color: #fef2f2;
+    border-color: var(--danger-color);
+    color: var(--danger-color);
+    font-weight: 600;
+}
+
+.status-bar.status-success {
+    background-color: #f0fdf4;
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+    font-weight: 600;
+}
+
+.status-bar.status-loading {
+    background-color: #eff6ff;
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    font-weight: 600;
 }
 
 /* Loading Spinner */

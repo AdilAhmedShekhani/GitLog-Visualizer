@@ -1,6 +1,6 @@
 <!-- Updated README with --full-history support and expanded meta fields -->
 
-# GitViz CLI
+# GitViz - CLI Client
 
 Minimal Git inspector. Ask for only the data blocks you want (contributors, branches, file/directory change activity, frequencies, etc.).
 

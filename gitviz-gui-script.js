@@ -18,8 +18,8 @@ class GitVizDashboard {
 
     bindEvents() {
         // Repository input controls
-        document.getElementById('browseBtn').addEventListener('click', () => {
-            document.getElementById('dirPicker').click();
+        document.getElementById('demoDataBtn').addEventListener('click', () => {
+            this.loadDemoData();
         });
 
         document.getElementById('currentDirBtn').addEventListener('click', () => {
@@ -32,13 +32,6 @@ class GitVizDashboard {
 
         document.getElementById('refreshChartsBtn').addEventListener('click', () => {
             this.refreshCharts();
-        });
-
-        document.getElementById('dirPicker').addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                const path = e.target.files[0].webkitRelativePath.split('/')[0];
-                document.getElementById('repoPath').value = path;
-            }
         });
 
         // Enter key support
@@ -60,6 +53,98 @@ class GitVizDashboard {
         }
     }
 
+    // Load demo data instead of making server calls
+    async loadDemoData() {
+        this.showLoading();
+        this.updateStatus('Loading demo data...', 'loading');
+
+        try {
+            // Use direct mock data - no file loading complexity
+            const demoData = this.getMockData();
+            this.currentData = demoData;
+            this.currentRepo = 'Demo Repository';
+
+            this.renderDashboard();
+            this.updateStatus('Demo dashboard loaded successfully!', 'success');
+            this.hideLoading();
+
+            // Show refresh charts button
+            document.getElementById('refreshChartsBtn').style.display = 'inline-flex';
+        } catch (error) {
+            this.updateStatus(`Error loading demo data: ${error.message}`, 'error');
+            this.hideLoading();
+        }
+    }
+
+    // Direct mock data - no external dependencies
+    getMockData() {
+        return {
+            meta: {
+                repo: "Demo Repository",
+                since: "2025-07-23",
+                until: "2025-08-22",
+                rangeDays: 30,
+                firstCommitDate: "2025-02-22",
+                repoAgeDays: 180,
+                generated: new Date().toISOString()
+            },
+            contributors: [
+                { name: "Alice Johnson", email: "alice@example.com", commits: 45 },
+                { name: "Bob Smith", email: "bob@example.com", commits: 32 },
+                { name: "Carol Davis", email: "carol@example.com", commits: 28 },
+                { name: "David Wilson", email: "david@example.com", commits: 19 },
+                { name: "Eve Brown", email: "eve@example.com", commits: 12 }
+            ],
+            contributorStats: [
+                { additions: 2847, deletions: 1203 },
+                { additions: 1956, deletions: 892 },
+                { additions: 1643, deletions: 734 },
+                { additions: 1124, deletions: 567 },
+                { additions: 743, deletions: 298 }
+            ],
+            commitFrequency: {
+                "2025-07-23": 3, "2025-07-24": 5, "2025-07-25": 2,
+                "2025-07-28": 4, "2025-07-29": 7, "2025-07-30": 6, "2025-07-31": 3, "2025-08-01": 8,
+                "2025-08-02": 4, "2025-08-05": 9, "2025-08-06": 12,
+                "2025-08-07": 5, "2025-08-08": 7, "2025-08-09": 3,
+                "2025-08-12": 6, "2025-08-13": 8, "2025-08-14": 4, "2025-08-15": 11, "2025-08-16": 2,
+            },
+            branches: [
+                { branch: "main", tip: "a1b2c3d" },
+                { branch: "feature/auth", tip: "e4f5g6h" },
+                { branch: "bugfix/login", tip: "i7j8k9l" },
+                { branch: "develop", tip: "m0n1o2p" }
+            ],
+            branchStats: [
+                { commits: 89, authors: 5, merges: 12 },
+                { commits: 23, authors: 2, merges: 0 },
+                { commits: 8, authors: 1, merges: 1 },
+                { commits: 56, authors: 4, merges: 8 }
+            ],
+            fileStats: [
+                { path: "src/main.js", changes: 34, additions: 892, deletions: 267 },
+                { path: "src/components/Dashboard.vue", changes: 28, additions: 654, deletions: 123 },
+                { path: "src/utils/api.js", changes: 22, additions: 445, deletions: 189 },
+                { path: "README.md", changes: 19, additions: 234, deletions: 45 },
+                { path: "package.json", changes: 15, additions: 89, deletions: 23 },
+                { path: "src/styles/main.css", changes: 12, additions: 156, deletions: 67 },
+                { path: "tests/unit/main.test.js", changes: 11, additions: 289, deletions: 34 },
+                { path: "src/components/UserProfile.vue", changes: 9, additions: 178, deletions: 45 },
+                { path: "src/router/index.js", changes: 8, additions: 123, deletions: 29 },
+                { path: "config/webpack.config.js", changes: 7, additions: 98, deletions: 12 }
+            ],
+            directoryStats: [
+                { directory: "src", changes: 127, additions: 2435, deletions: 678 },
+                { directory: "tests", changes: 34, additions: 567, deletions: 123 },
+                { directory: "docs", changes: 23, additions: 345, deletions: 89 },
+                { directory: "config", changes: 18, additions: 234, deletions: 56 },
+                { directory: ".", changes: 45, additions: 456, deletions: 134 },
+                { directory: "public", changes: 12, additions: 145, deletions: 23 },
+                { directory: "scripts", changes: 8, additions: 89, deletions: 15 }
+            ]
+        };
+    }
+
     updateStatus(message, type = 'info') {
         const statusBar = document.getElementById('statusBar');
         statusBar.textContent = message;
@@ -76,6 +161,17 @@ class GitVizDashboard {
         document.getElementById('dashboardContent').style.display = 'block';
     }
 
+    hideDashboard() {
+        document.getElementById('loadingSpinner').style.display = 'none';
+        document.getElementById('dashboardContent').style.display = 'none';
+
+        // Hide refresh charts button
+        document.getElementById('refreshChartsBtn').style.display = 'none';
+
+        // Clear current data
+        this.currentData = null;
+    }
+
     async generateDashboard() {
         const repoPath = document.getElementById('repoPath').value.trim() || '.';
         this.currentRepo = repoPath;
@@ -86,6 +182,12 @@ class GitVizDashboard {
         try {
             const command = `node gitviz.js --repo "${repoPath}" --meta --total-commits --top --contributor-stats --file-stats --directory-stats --branches --branch-stats --commit-frequency --json`
             const data = await this.runCommand(command);
+
+            // Check if data is valid
+            if (!data || data.error) {
+                throw new Error(data?.error || 'No data received from GitViz CLI');
+            }
+
             this.currentData = data;
 
             // Debugging
@@ -98,7 +200,22 @@ class GitVizDashboard {
             // Show refresh charts button
             document.getElementById('refreshChartsBtn').style.display = 'inline-flex';
         } catch (error) {
-            this.updateStatus(`Error: ${error.message}`, 'error');
+            console.error('Dashboard generation failed:', error);
+
+            // Hide dashboard and show error
+            this.hideDashboard();
+
+            // Provide detailed error message with troubleshooting
+            let errorMessage = 'Failed to load repository data. ';
+            if (error.message.includes('fetch')) {
+                errorMessage += 'Server not running? Start: node gitviz-gui-server.js \ Also Check Console (Press F12)';
+            } else if (error.message.includes('No data')) {
+                errorMessage += 'Check console for CLI errors.';
+            } else {
+                errorMessage += `Error: ${error.message}`;
+            }
+
+            this.updateStatus(errorMessage, 'error');
             this.hideLoading();
         }
     }
@@ -114,10 +231,19 @@ class GitVizDashboard {
                 body: JSON.stringify({ command: cmd }),
             });
 
+            if (!res.ok) {
+                throw new Error(`Server responded with status: ${res.status}`);
+            }
+
             const data = await res.json();
+
+            // Log server response for debugging
+            console.log('Server response:', data);
+
             return data;
         } catch (err) {
-            console.error("Error:", err);
+            console.error("Server communication error:", err);
+            throw new Error(`Server communication failed: ${err.message}. Make sure gitviz-gui-server.js is running.`);
         }
     }
 

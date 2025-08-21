@@ -21,8 +21,8 @@ flowchart TD
     B --> E["GUI (webpage)"]
 ```
 
-- CLI Client: The functionality of parsing the git data, we have created `gitviz-cli.js`, which can be used standalone, feed data to other program, with the full control of output, what you want(give flags for your wanted data, like --meta, --file-stats) and in which format(plain text is default, json). In short, it handles all the parsing work.
-- CLI Dashboard: This is CLI Dashboard based on CLI Client.
+- CLI Client: The functionality of parsing the git data, we have created `gitviz-cli.js`, which can be used standalone, feed data to other program, with the full control of output, what you want(give flags for your wanted data, like --meta, --file-stats) and in which format(plain text is default, json). In short, it handles all the parsing work. [Learn More about GitViz CLI and its Usage in GitViz CLI README](./GitViz-CLI-README.md)
+- CLI Dashboard: This is CLI Dashboard based on CLI Client. `gitviz-cli-dashboard.js` this is the dashboard file, you can still give the flags just like `gitviz-cli.js` but the output is structured and formatted, accepts all the flags. 
 - GUI: This is GUI based on CLI Client.
 
 

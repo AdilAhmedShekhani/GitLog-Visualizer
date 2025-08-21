@@ -163,22 +163,21 @@ function calcHighestWidth(obj, objSelector, min = 0) {
 function getTerminalWidth() {
     return process.stdout.columns || 100;
 }
-function horizontalRule(char = "─") {
-	return char.repeat(Math.min(getTerminalWidth(), 120));
+function horizontalRule({char="─", minWidth=0, maxWidth=300} = {}) {
+	return char.repeat(Math.min(Math.max(getTerminalWidth(), minWidth), maxWidth));
 }
-function centerText(text) {
-    // const width = 300;
-    const width = getTerminalWidth();
+function centerText({text, minWidth=0, maxWidth=300} = {}) {
+    const width = Math.min(Math.max(getTerminalWidth(), minWidth), maxWidth);
     if (text.length >= width) return text.slice(0, width);
     const padSize = width - text.length;
     const left = Math.floor(padSize / 2);
     const right = padSize - left;
     return " ".repeat(left) + text + " ".repeat(right);
 }
-function printSectionHeader(title, color="cyan", insertNewLineBefore=true, insertNewLineAfter=false) {
-	insertNewLineBefore ? console.log() : null;
-    console.log(colorize(colorize(centerText(` ${title} `), color), "bold"));
-    console.log(horizontalRule());
+function printSectionHeader(title, color="cyan", minWidth=0, maxWidth=100, insertNewLineBefore=true, insertNewLineAfter=false) {
+    insertNewLineBefore ? console.log() : null;
+    console.log(colorize(colorize(centerText({text: ` ${title} `, maxWidth}), color), "bold"));
+    console.log(horizontalRule({maxWidth}));
 	insertNewLineAfter ? console.log() : null;
 }
 

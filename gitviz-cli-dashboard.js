@@ -15,8 +15,8 @@ const DEFAULT_TOP_FILES_LIMIT = 10;
 // TODO: Use this config to fix formatting, align right coloums to end the right and expand the fist col.
 const CONFIG = {
     CONTRIBUTORS_LIMIT: 3,
-    FILES_LIMIT: 5,
-    DIRECTORY_LIMIT: 5,
+    FILES_LIMIT: 3,
+    DIRECTORY_LIMIT: 3,
 };
 
 let BASE_CMD = `node gitviz-cli.js`;
@@ -199,7 +199,7 @@ function showContributors(contributorsObj, contributorsStatsObj) {
         ...obj,
         ...contributorsStatsObj[i],
     })).sort((a, b) => b.commits - a.commits).slice(0, CONFIG.CONTRIBUTORS_LIMIT);
-	
+
     const contributorRows = computeContributorPercentages(combinedObjArr).map((c) => [colorize(`${c.name} <${c.email}>`, "blue"), colorize(c.commits, "yellow"), colorize(c.percent + "%", "magenta"), colorize(c.additions, "green"), colorize(c.deletions, "red")]);
 
     console.log(

@@ -60,12 +60,7 @@ function parseArgs(argv) {
         const t = argv[i];
         const next = () => argv[++i];
         // Generic --key[value] support
-        if (
-            t.startsWith("--") &&
-            t.includes("[") &&
-            t.endsWith("]") &&
-            !t.includes(" ")
-        ) {
+        if (t.startsWith("--") && t.includes("[") && t.endsWith("]") && !t.includes(" ")) {
             const m = t.match(/^--([a-z0-9-]+)\[(.*)\]$/i);
             if (m) {
                 const flag = `--${m[1]}`;
@@ -149,16 +144,12 @@ function parseArgs(argv) {
         else if (t === "--all") args.all = true;
         else if (t === "--author") args.author = next();
         else if (t === "--days") args.days = parseInt(next(), 10) || null;
-        else if (t.startsWith("--since"))
-            args.since = t.includes("=") ? t.split("=")[1] : next();
-        else if (t.startsWith("--until"))
-            args.until = t.includes("=") ? t.split("=")[1] : next();
+        else if (t.startsWith("--since")) args.since = t.includes("=") ? t.split("=")[1] : next();
+        else if (t.startsWith("--until")) args.until = t.includes("=") ? t.split("=")[1] : next();
         else if (t === "--contributors") args.contributors = true;
         else if (t === "--contributor-stats") args.contributorStats = true;
-        else if (t === "--commit-frequency-by-author")
-            args.commitFrequencyByAuthor = true;
-        else if (t === "--commit-frequency-by-branch")
-            args.commitFrequencyByBranch = true;
+        else if (t === "--commit-frequency-by-author") args.commitFrequencyByAuthor = true;
+        else if (t === "--commit-frequency-by-branch") args.commitFrequencyByBranch = true;
         else if (t.startsWith("--commit-frequency")) {
             // Support forms:
             // --commit-frequency (defaults daily)
@@ -177,8 +168,7 @@ function parseArgs(argv) {
         } else if (t === "--branches") args.branches = true;
         else if (t === "--branch-stats") args.branchStats = true;
         else if (t === "--total-commits") args.totalCommits = true;
-        else if (t === "--average-commits-per-day")
-            args.averageCommitsPerDay = true;
+        else if (t === "--average-commits-per-day") args.averageCommitsPerDay = true;
         else if (t === "--commit-distribution") args.commitDistribution = true;
         else if (t === "--file-stats") args.fileStats = true;
         else if (t === "--directory-stats") args.directoryStats = true;
@@ -198,11 +188,7 @@ function parseArgs(argv) {
             args.contributors = true;
         } else if (t === "--limit-branches") {
             next(); /* ignore */
-        } else if (
-            t === "--no-branches" ||
-            t === "--no-contrib" ||
-            t === "--no-graph"
-        ) {
+        } else if (t === "--no-branches" || t === "--no-contrib" || t === "--no-graph") {
             /* ignore */
         }
     }
@@ -237,10 +223,7 @@ function ensureRepo(path) {
 }
 function repoFirstCommitDate(path) {
     try {
-        const out = runGit(
-            ["log", "--date=short", "--pretty=format:%ad", "--reverse"],
-            path
-        ).trim();
+        const out = runGit(["log", "--date=short", "--pretty=format:%ad", "--reverse"], path).trim();
         if (!out) return null;
         return out.split(/\r?\n/)[0];
     } catch {
@@ -294,12 +277,7 @@ function collectCommitsWithNumstat(cfg) {
     const sep = "\u0001";
     // Use committer date (%cd) for consistency with filtering
     const header = `commit${sep}%H${sep}%an${sep}%ae${sep}%cd`;
-    const cmd = [
-        "log",
-        "--date=short",
-        `--pretty=format:${header}`,
-        "--numstat",
-    ];
+    const cmd = ["log", "--date=short", `--pretty=format:${header}`, "--numstat"];
     if (cfg.all) cmd.splice(1, 0, "--all");
     if (cfg.author) cmd.push(`--author=${cfg.author}`);
     cmd.push(...timeArgs(cfg));
@@ -457,30 +435,18 @@ function fileStats(numCommits) {
             }
         });
     });
-    return Object.values(map).sort(
-        (a, b) =>
-            b.changes - a.changes ||
-            b.additions + b.deletions - (a.additions + a.deletions)
-    );
+    return Object.values(map).sort((a, b) => b.changes - a.changes || b.additions + b.deletions - (a.additions + a.deletions));
 }
 function directoryStats(fileStatsList) {
     const map = {};
     fileStatsList.forEach((f) => {
-        const dir = f.path.includes("/")
-            ? f.path.split("/").slice(0, -1).join("/")
-            : ".";
-        const e =
-            map[dir] ||
-            (map[dir] = { directory: dir, changes: 0, additions: 0, deletions: 0 });
+        const dir = f.path.includes("/") ? f.path.split("/").slice(0, -1).join("/") : ".";
+        const e = map[dir] || (map[dir] = { directory: dir, changes: 0, additions: 0, deletions: 0 });
         e.changes += f.changes;
         e.additions += f.additions;
         e.deletions += f.deletions;
     });
-    return Object.values(map).sort(
-        (a, b) =>
-            b.changes - a.changes ||
-            b.additions + b.deletions - (a.additions + a.deletions)
-    );
+    return Object.values(map).sort((a, b) => b.changes - a.changes || b.additions + b.deletions - (a.additions + a.deletions));
 }
 function branchCommitCounts(repo, branches, cfg) {
     const counts = {};
@@ -500,21 +466,10 @@ function branchStats(repo, branches, cfg) {
             authors = 0,
             authorList = [];
         try {
-            commits =
-                parseInt(
-                    runGit(["rev-list", b.branch, "--count", ...t], repo).trim(),
-                    10
-                ) || 0;
+            commits = parseInt(runGit(["rev-list", b.branch, "--count", ...t], repo).trim(), 10) || 0;
         } catch {}
         try {
-            merges =
-                parseInt(
-                    runGit(
-                        ["rev-list", b.branch, "--merges", "--count", ...t],
-                        repo
-                    ).trim(),
-                    10
-                ) || 0;
+            merges = parseInt(runGit(["rev-list", b.branch, "--merges", "--count", ...t], repo).trim(), 10) || 0;
         } catch {}
         try {
             const fmt = "%an%x01%ae"; // name + email
@@ -588,11 +543,7 @@ function outputPlain(sections) {
             });
         } else if (typeof value === "object") {
             // Special formatting: commitFrequencyByAuthor => blocks: author + its dates
-            if (
-                key === "commitFrequencyByAuthor" &&
-                depth === 1 &&
-                Object.values(value).every((v) => typeof v === "object" && v !== null)
-            ) {
+            if (key === "commitFrequencyByAuthor" && depth === 1 && Object.values(value).every((v) => typeof v === "object" && v !== null)) {
                 const authorNames = Object.keys(value);
                 authorNames.forEach((author, idx) => {
                     push(`author: ${author}`);
@@ -665,26 +616,13 @@ function outputPlain(sections) {
         args.since = fmtDate(start);
     }
     const firstDate = repoFirstCommitDate(args.repo);
-    const repoAgeDays = firstDate
-        ? diffDaysInclusive(firstDate, fmtDate(new Date()))
-        : 0;
+    const repoAgeDays = firstDate ? diffDaysInclusive(firstDate, fmtDate(new Date())) : 0;
 
     // Decide which data sets are needed
-    const needCommitsBasic = [
-        args.commitFrequency,
-        args.commitFrequencyByAuthor,
-        args.commitFrequencyByBranch,
-        args.branches,
-        args.branchStats,
-        args.totalCommits,
-        args.averageCommitsPerDay,
-        args.commitDistribution,
-        args.contributors,
-        args.topContributors != null,
-        args.contributorStats,
-    ].some(Boolean);
-    const needNumstat =
-        args.fileStats || args.directoryStats || args.contributorStats;
+    const needCommitsBasic = [args.commitFrequency, args.commitFrequencyByAuthor, args.commitFrequencyByBranch, args.branches, args.branchStats, args.totalCommits, args.averageCommitsPerDay, args.commitDistribution, args.contributors, args.topContributors != null, args.contributorStats].some(
+        Boolean
+    );
+    const needNumstat = args.fileStats || args.directoryStats || args.contributorStats;
 
     const sections = {};
     let commitsBasic = [];
@@ -715,11 +653,8 @@ function outputPlain(sections) {
     }
     // Contributors basic list
     if (args.contributors || args.topContributors != null) {
-        const list = calcContributors(
-            commitsBasic.length ? commitsBasic : commitsNum
-        );
-        const topN =
-            args.topContributors != null ? args.topContributors : list.length;
+        const list = calcContributors(commitsBasic.length ? commitsBasic : commitsNum);
+        const topN = args.topContributors != null ? args.topContributors : list.length;
         sections.contributors = list.slice(0, topN);
     }
     if (args.contributorStats) {
@@ -727,9 +662,7 @@ function outputPlain(sections) {
         sections.contributorStats = stats;
     }
     if (args.commitFrequency) {
-        const gran = ["daily", "weekly", "monthly"].includes(args.commitFrequency)
-            ? args.commitFrequency
-            : "daily";
+        const gran = ["daily", "weekly", "monthly"].includes(args.commitFrequency) ? args.commitFrequency : "daily";
         sections.commitFrequency = frequencyAggregate(commitsBasic, gran);
     }
     if (args.commitFrequencyByAuthor) {
@@ -737,11 +670,7 @@ function outputPlain(sections) {
     }
     if (args.commitFrequencyByBranch) {
         const branches = listBranches(args.repo);
-        sections.commitFrequencyByBranch = branchCommitCounts(
-            args.repo,
-            branches,
-            args
-        );
+        sections.commitFrequencyByBranch = branchCommitCounts(args.repo, branches, args);
     }
     if (args.branches) {
         const branches = listBranches(args.repo).map((b) => {
@@ -760,18 +689,11 @@ function outputPlain(sections) {
         const branches = listBranches(args.repo);
         sections.branchStats = branchStats(args.repo, branches, args);
     }
-    if (args.totalCommits)
-        sections.totalCommits = commitsBasic.length || commitsNum.length;
-    if (args.commitDistribution)
-        sections.commitDistribution = calcCommitDistribution(commitsBasic);
+    if (args.totalCommits) sections.totalCommits = commitsBasic.length || commitsNum.length;
+    if (args.commitDistribution) sections.commitDistribution = calcCommitDistribution(commitsBasic);
     if (args.averageCommitsPerDay) {
         const total = commitsBasic.length || commitsNum.length;
-        if (effectiveSince && effectiveUntil)
-            sections.averageCommitsPerDay = calcAveragePerDay(
-                total,
-                effectiveSince,
-                effectiveUntil
-            );
+        if (effectiveSince && effectiveUntil) sections.averageCommitsPerDay = calcAveragePerDay(total, effectiveSince, effectiveUntil);
         else sections.averageCommitsPerDay = 0;
     }
     if (args.fileStats) {
@@ -796,23 +718,14 @@ function outputPlain(sections) {
                 until: effectiveUntil || null,
                 repoAgeDays,
                 firstCommitDate: firstDate || null,
-                rangeDays:
-                    effectiveSince && effectiveUntil
-                        ? diffDaysInclusive(effectiveSince, effectiveUntil)
-                        : null,
+                rangeDays: effectiveSince && effectiveUntil ? diffDaysInclusive(effectiveSince, effectiveUntil) : null,
                 generated: new Date().toISOString(),
             };
         }
         console.log(JSON.stringify(sections, null, 2));
     } else {
         if (args.meta) {
-            const metaLines = [
-                `repo: ${args.repo}`,
-                `since: ${effectiveSince || "null"}`,
-                `until: ${effectiveUntil || "null"}`,
-                `repoAgeDays: ${repoAgeDays}`,
-                `generated: ${new Date().toISOString()}`,
-            ];
+            const metaLines = [`repo: ${args.repo}`, `since: ${effectiveSince || "null"}`, `until: ${effectiveUntil || "null"}`, `repoAgeDays: ${repoAgeDays}`, `generated: ${new Date().toISOString()}`];
             console.log(metaLines.join("\n"));
             if (Object.keys(sections).length) console.log(""); // blank line only if more follows
         }

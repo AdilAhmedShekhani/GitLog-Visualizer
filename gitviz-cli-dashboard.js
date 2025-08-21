@@ -6,13 +6,10 @@
  */
 
 const { execSync } = require("child_process");
-const fs = require("fs");
 
 // ----------------------------- Configuration -----------------------------
-const DEFAULT_TOP_CONTRIBUTORS_LIMIT = 10;
-const DEFAULT_TOP_FILES_LIMIT = 10;
-
 // TODO: Use this config to fix formatting, align right coloums to end the right and expand the fist col.
+// TODO: Allow user to customize this via flag/input
 const CONFIG = {
     CONTRIBUTORS_LIMIT: 3,
     FILES_LIMIT: 3,
@@ -163,21 +160,22 @@ function calcHighestWidth(obj, objSelector, min = 0) {
 function getTerminalWidth() {
     return process.stdout.columns || 100;
 }
-function horizontalRule({char="─", minWidth=0, maxWidth=300} = {}) {
-	return char.repeat(Math.min(Math.max(getTerminalWidth(), minWidth), maxWidth));
+function horizontalRule(char = "─") {
+	return char.repeat(Math.min(getTerminalWidth(), 120));
 }
-function centerText({text, minWidth=0, maxWidth=300} = {}) {
-    const width = Math.min(Math.max(getTerminalWidth(), minWidth), maxWidth);
+function centerText(text) {
+    // const width = 300;
+    const width = getTerminalWidth();
     if (text.length >= width) return text.slice(0, width);
     const padSize = width - text.length;
     const left = Math.floor(padSize / 2);
     const right = padSize - left;
     return " ".repeat(left) + text + " ".repeat(right);
 }
-function printSectionHeader(title, color="cyan", minWidth=0, maxWidth=100, insertNewLineBefore=true, insertNewLineAfter=false) {
-    insertNewLineBefore ? console.log() : null;
-    console.log(colorize(colorize(centerText({text: ` ${title} `, maxWidth}), color), "bold"));
-    console.log(horizontalRule({maxWidth}));
+function printSectionHeader(title, color="cyan", insertNewLineBefore=true, insertNewLineAfter=false) {
+	insertNewLineBefore ? console.log() : null;
+    console.log(colorize(colorize(centerText(` ${title} `), color), "bold"));
+    console.log(horizontalRule());
 	insertNewLineAfter ? console.log() : null;
 }
 
@@ -390,22 +388,6 @@ function main() {
 
 	console.log("\nGitHub: https://github.com/AdilAhmedShekhani/GitViz")
 }
+
 main();
-process.exit(1)```
---contributors	List authors with commit counts.
---top N	Top N contributors (implies --contributors).
---contributor-stats	Commits + additions + deletions per author.
---commit-frequency[=g]	Commits grouped by g = daily (default), weekly, monthly.
---commit-frequency-by-author	Per-author daily commit counts.
---commit-frequency-by-branch	Commit counts per branch (respects date filters).
---branches	Branch basic info (name, tip, last commit date, last author).
---branch-stats	Commits, merges, unique author count + list per branch.
---total-commits	Total commits in range.
---average-commits-per-day	Average commits per day in range.
---commit-distribution	Date → commit count map (daily).
---file-stats	Per file churn: changes, additions, deletions.
---directory-stats	Aggregated churn per directory.
---meta	Add meta: repo, since, until, repoAgeDays, firstCommitDate, rangeDays, generated.
---full-history	Use entire repo history (disables default window if no explicit range).
---format json / --json	Output JSON instead of text.
-```;
+

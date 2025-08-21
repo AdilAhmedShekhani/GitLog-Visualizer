@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitViz Dashboard</title>
+    <link rel="stylesheet" href="gitviz-gui-style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="title">GitViz Dashboard</h1>
+            <p class="subtitle">Git Repository Analytics & Visualization</p>
+        </header>
+
+        <!-- Repository Input Section -->
+        <section class="repo-input-section">
+            <div class="input-group">
+                <label for="repoPath">Repository Path:</label>
+                <div class="input-controls">
+                    <input type="text" id="repoPath" placeholder="Enter repository path..." value=".">
+                    <button id="browseBtn" class="btn btn-secondary">Browse</button>
+                    <button id="currentDirBtn" class="btn btn-accent">Current Directory</button>
+                    <button id="generateBtn" class="btn btn-primary">Generate Dashboard</button>
+                    <button id="refreshChartsBtn" class="btn btn-secondary" style="display: none;">Refresh Charts</button>
+                </div>
+                <input type="file" id="dirPicker" webkitdirectory style="display: none;">
+            </div>
+            <div class="status-bar" id="statusBar">Ready to analyze repository...</div>
+        </section>
+
+        <!-- Loading Spinner -->
+        <div class="loading" id="loadingSpinner" style="display: none;">
+            <div class="spinner"></div>
+            <p>Analyzing repository...</p>
+        </div>
+
+        <!-- Dashboard Content -->
+        <main class="dashboard" id="dashboardContent" style="display: none;">
+            <!-- Meta Information -->
+            <section class="meta-section">
+                <div class="meta-card">
+                    <h3>Repository Information</h3>
+                    <div class="meta-grid" id="metaInfo">
+                        <!-- Meta data will be populated here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Commit Frequency Section -->
+            <section class="frequency-section">
+                <h2 class="section-title">Commit Frequency</h2>
+                <div class="frequency-cards">
+                    <div class="frequency-card">
+                        <h4>Daily Activity</h4>
+                        <div class="sparkline" id="dailySparkline"></div>
+                        <div class="chart-container">
+                            <canvas id="dailyChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="frequency-card">
+                        <h4>Weekly Trends</h4>
+                        <div class="sparkline" id="weeklySparkline"></div>
+                        <div class="chart-container">
+                            <canvas id="weeklyChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="frequency-card">
+                        <h4>Monthly Overview</h4>
+                        <div class="sparkline" id="monthlySparkline"></div>
+                        <div class="chart-container">
+                            <canvas id="monthlyChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Stats Grid -->
+            <section class="stats-grid">
+                <!-- Contributors -->
+                <div class="stats-card">
+                    <h3>Top Contributors</h3>
+                    <div class="contributors-list" id="contributorsList">
+                        <!-- Contributors will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Branches -->
+                <div class="stats-card">
+                    <h3>Branches</h3>
+                    <div class="branches-list" id="branchesList">
+                        <!-- Branches will be populated here -->
+                    </div>
+                </div>
+
+                <!-- File Stats -->
+                <div class="stats-card">
+                    <h3>Most Active Files</h3>
+                    <div class="files-list" id="filesList">
+                        <!-- Files will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Directory Stats -->
+                <div class="stats-card">
+                    <h3>Directory Activity</h3>
+                    <div class="directories-list" id="directoriesList">
+                        <!-- Directories will be populated here -->
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>GitViz Dashboard | <a href="https://github.com/AdilAhmedShekhani/GitViz" target="_blank">GitHub</a></p>
+        </footer>
+    </div>
+
+    <script src="gitviz-gui-script.js"></script>
+</body>
+</html>

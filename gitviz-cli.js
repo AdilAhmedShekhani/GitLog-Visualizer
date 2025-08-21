@@ -467,10 +467,10 @@ function branchStats(repo, branches, cfg) {
             authorList = [];
         try {
             commits = parseInt(runGit(["rev-list", b.branch, "--count", ...t], repo).trim(), 10) || 0;
-        } catch {}
+        } catch { }
         try {
             merges = parseInt(runGit(["rev-list", b.branch, "--merges", "--count", ...t], repo).trim(), 10) || 0;
-        } catch {}
+        } catch { }
         try {
             const fmt = "%an%x01%ae"; // name + email
             const args = ["log", b.branch, `--pretty=format:${fmt}`, ...t];
@@ -490,7 +490,7 @@ function branchStats(repo, branches, cfg) {
                 });
             authors = set.size;
             authorList = Array.from(set).sort();
-        } catch {}
+        } catch { }
         return { branch: b.branch, commits, merges, authors, authorList };
     });
 }
@@ -616,6 +616,10 @@ function outputPlain(sections) {
         args.since = fmtDate(start);
     }
     const firstDate = repoFirstCommitDate(args.repo);
+    if (args.fullHistory){
+        args.since = firstDate
+        args.until = new Date().toISOString().split("T")[0]; // "2025-08-21"
+    }
     const repoAgeDays = firstDate ? diffDaysInclusive(firstDate, fmtDate(new Date())) : 0;
 
     // Decide which data sets are needed

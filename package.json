@@ -10,6 +10,6 @@
   "license": "ISC",
   "description": "",
   "bin": {
-  "gitviz": "./gitviz-cli.js"
+  "gitviz": "./gitviz.js"
 }
 }
